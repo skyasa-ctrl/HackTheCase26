@@ -88,5 +88,13 @@ A single file to paste into Claude (or any AI tool) so it understands the case, 
 - **LWBS recovery:** 4% × 85,000 = 3,400 lost visits/yr. Reaching 2.5% recovers about 1,275 visits × $1,500 ≈ **$1.9M/yr**. Least certain assumption: that recovered visits earn the average net revenue, since uninsured visits bring in less.
 - **Draft Month-18 goals:** door-to-provider 55 → 40 min · LWBS 4.0% → 2.5% · uninsured-vs-commercial wait gap 16 → ≤8 min and uninsured LWBS 5.8% → ≤3.5% · nurse override rate held between 10% and 30%.
 
+**Final numbers (Nov 22, used in all docs and slides):**
+- **Budget:** ≈$700K over 18 months (pilot $377K, scale $323K, incl. 10% contingency). Year-2 run cost ≈$140K/yr.
+- **Value:** conservative ≈$1.03M/yr (1,275 visits × $750 after a 50% revenue haircut, plus 1,095 nurse-hours × $65).
+- **ROI:** 121% during build, ≈640% in year 2. Break-even at LWBS 3.6%.
+- **Traditional alternative:** one 24/7 triage nurse = $569K/yr ($854K on overtime).
+- **Fast-track model:** cutoff 86%, bounce-back 3.3% (target < 5%), AUC 0.98 on synthetic data.
+- **Slides:** https://claude.ai/artifact/MnpDwVSMsAaBWMczpnAJiW · **Script:** video/SCRIPT.md
+
 ## 5. Team
 Arabella (Claude Max): ranking & scoring matrix, Roadmap · Sophie: fast-track intake, Budget & ROI, lead on data security · Priya (Claude Pro): capacity input, AI Architecture · **Everyone:** Risk Assessment & Mitigation (each person covers their own component), demo integration, video.

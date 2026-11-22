@@ -113,6 +113,17 @@ def iso(dt):
     return dt.strftime("%Y-%m-%dT%H:%M:%S")
 
 
+def _realign(rec, arrival):
+    """Move a generated patient record's arrival time; re-check and update times never precede arrival."""
+    rec["arrival_time"] = iso(arrival)
+    if rec["last_recheck_time"] < rec["arrival_time"] or rec["last_recheck_time"] > iso(NOW):
+        rec["last_recheck_time"] = rec["arrival_time"]
+    rec["last_recheck_time"] = max(rec["last_recheck_time"], rec["arrival_time"])
+    for u in rec.get("symptom_updates", []):
+        if u.get("time", "") < rec["arrival_time"]:
+            u["time"] = rec["arrival_time"]
+
+
 # ---------------------------------------------------------------------------
 # Intake generation
 # ---------------------------------------------------------------------------
@@ -487,6 +498,13 @@ def main():
     assert len(esi1) == 1
     esi1[0]["status"] = "waiting"
     esi1[0]["arrival_mode"] = "ambulance"
+    # Clinical realism: ESI 1 is a just-arrived ambulance patient being roomed now (not left waiting),
+    # and ESI 2 patients have short waits (stroke / chest pain are time-critical). Post-generation so
+    # RNG draws are unchanged; symptom-update and re-check times are clamped to after arrival.
+    _realign(esi1[0], NOW - timedelta(minutes=3))
+    for k, p in enumerate(sorted([q for q in patients if q["esi"] == 2 and q["status"] == "waiting"],
+                                 key=lambda q: q["id"])):
+        _realign(p, NOW - timedelta(minutes=[38, 24, 16, 12][k % 4]))
     rooms = gen_rooms(rng, patients)
     write_dataset("history", history, "history")
     write_dataset("patients", patients, "patients", indent=2)
