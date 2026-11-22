@@ -1,45 +1,110 @@
 # 1. AI Tool Architecture
 
 **Owner:** Priya · **Rubric:** 9 pts (Focus 2 · Oversight 2 · Tools 2 · Technical design 3)
-Status: 🟡 draft skeleton. Replace the bullets with final content and keep numbers consistent with [CONTEXT_BUNDLE.md](CONTEXT_BUNDLE.md).
+Status: 🟢 complete draft. Numbers match [CONTEXT_BUNDLE.md](CONTEXT_BUNDLE.md) and [docs/BUDGET_ROI.md](docs/BUDGET_ROI.md).
 
 ---
 
 ## 1.1 Focus area & rationale (2 pts)
-**Intake & Triage.**
-- Door-to-provider is 55 min vs 30–40 nationally, and LWBS is 4% vs 2–3%. That's about 3,400 patients a year leaving unseen.
-- The equity gap is largest here: uninsured patients wait 64 min with 5.8% LWBS, versus 48 min and 3.0% for commercially insured.
-- Who is affected: low-urgency patients who wait 2+ hours on surge days, and triage nurses sorting arrivals by hand.
-- Why not the other areas: Patient Flow/boarding platforms are enterprise-priced (Tampa General's GE command center cost about $13M). Staffing forecasting alone doesn't fix how the queue is ordered. Patient communication is built into our tool through the QR/SMS updates.
+**Intake & Triage**, from the moment a patient checks in until a provider sees them.
+
+| Why here | Halvian | National | Gap |
+|---|---|---|---|
+| Median door-to-provider | 55 min | 30–40 min | +15–25 min |
+| Left without being seen (LWBS) | 4.0% (≈3,400 patients/yr) | 2–3% | ≈850–1,700 extra patients/yr leave unseen |
+| Uninsured vs commercial wait | 64 vs 48 min | — | 16-min equity gap |
+| Uninsured vs commercial LWBS | 5.8% vs 3.0% | — | Nearly double |
+
+**Who is affected:**
+- **Low-urgency patients (ESI 4–5)** wait 2+ hours on surge days, even though 8 fast-track rooms exist. These patients are disproportionately Medicaid and uninsured; uninsured visits are 3.8 points more likely to be nonurgent (AJMC).
+- **Triage nurses** sort the waiting room by hand, re-check patients from memory, and field "how much longer?" questions.
+- **Patients** get few updates. Not knowing how long the wait will be is a main driver of LWBS.
+
+**Why not the other focus areas:**
+- **Patient flow / boarding:** enterprise platforms are quote-only. Tampa General's GE command center cost about $13M, 17× our 18-month budget.
+- **Staffing forecasts:** don't change how the queue is ordered.
+- **Patient communication:** built into our tool through the wristband QR link, SMS and a kiosk.
 
 ## 1.2 What AI does vs what stays human (2 pts)
-| Step | AI does | Human does / owns |
-|---|---|---|
-| Queue ordering | Suggests order within each acuity level and shows the reasons | **Charge nurse** confirms; can override with a logged reason |
-| Fast-track | Gives an eligibility score (e.g. "82% likely quick case") | **Triage nurse** accepts or overrides; **APP** owns care in fast-track |
-| Symptom updates | Maps patient input to a provisional score and flags red-flag symptoms | **Nurse** re-assesses and confirms before any points count |
-| Wait-time range | Estimates from current flow and open rooms | Staff can correct it |
-| Leaving patients | Drafts a "leave with a plan" message | **Nurse** edits and sends |
-| Weights & thresholds | Monthly report on outcomes vs suggestions | **ED clinical committee** approves changes |
+| Step | AI does | Human decides | Accountable owner |
+|---|---|---|---|
+| Queue ordering | Scores patients **within the same ESI level** and shows every point's reason | Confirms the order, can move or pin a patient with a logged reason | **Charge nurse** |
+| Fast-track | Gives an eligibility score (e.g. "89% likely quick case") from intake data | Accepts, declines or overrides with a reason code | **Triage nurse**; the **APP** owns care once the patient is in fast-track |
+| Symptom updates | Sorts patient-reported symptoms; red flags page a nurse immediately and bypass scoring | Re-assesses the patient and confirms before any points count | **Triage nurse** |
+| Wait-time range | Estimates a range from the queue and open rooms (never shown to ESI 1–2) | Staff update room status; can correct estimates | **Charge nurse** |
+| Patient thinking of leaving | Alerts a nurse and drafts a "leave with a plan" message | Edits and sends the message, or talks to the patient | **Triage nurse** |
+| Weights & cutoffs | Monthly report comparing suggestions with outcomes | Approves any change; **the model never changes itself** | **ED clinical committee** |
 
-**Accountability when the AI is wrong:** the clinician who accepted the suggestion is accountable for the clinical decision, as with any decision-support tool. The **ED medical director + nurse manager** own the tool's configuration and performance. The vendor or IT owns uptime.
+**When the AI is wrong:**
+- **Clinical decisions:** the clinician who accepted a suggestion owns that decision, as with any decision-support tool. ESI assignment always stays with the nurse.
+- **Configuration and performance:** the **ED medical director and ED nurse manager** own the weights, cutoff and pause decisions.
+- **Uptime and security:** **clinical informatics / IT** owns these.
 
 ## 1.3 Tools (2 pts)
-_Name real products, give rough costs, and say why each fits a small ED team._
-- **Cloud + AI model:** e.g. Azure OpenAI or AWS Bedrock (Claude) inside Halvian's own cloud tenant under a BAA (the HIPAA contract that covers vendors). Used for the symptom-text-to-category mapping and drafting messages.
-- **Prediction model:** fast-track eligibility via logistic regression or gradient-boosted trees, trained on Halvian's historical triage data. It's simple, explainable and cheap to run.
-- **EHR integration:** FHIR APIs (the standard health-records data interface) or HL7 feeds from the existing EHR and registration system. Results are written back into the EHR so nurses don't need a separate login.
-- **Patient messaging:** an SMS platform with a BAA (e.g. Twilio), plus a hospital-hosted web page reached by wristband QR code, plus a kiosk.
-- **Dashboard / low-code:** e.g. Power BI or a low-code app platform the hospital already licenses.
-- _Lower-cost alternatives to mention:_ the EHR vendor's built-in AI modules, and open-source models self-hosted.
+| Need | Tool | Rough cost | Why it fits a small ED team |
+|---|---|---|---|
+| Hosting + language model | **Azure OpenAI** or **AWS Bedrock (Claude)** inside Halvian's own cloud tenant, under a BAA | ≈$3K/month | Pay-per-use and HIPAA-eligible. Used only for low-risk text tasks: mapping free-text symptoms to categories and drafting messages. |
+| Fast-track prediction | **Logistic regression** trained on Halvian's past triage visits (scikit-learn); weights exported to the app | ≈$0 licence; validation time in the monitoring budget | Simple, explainable (each factor's weight is visible), cheap to run, easy to audit for bias |
+| Queue scoring | **Rules-based points matrix** with nurse-set weights | Built into the app | Transparent; nurses can see and change every weight |
+| EHR integration | **FHIR APIs / HL7 ADT feeds** from the existing EHR and registration system, through the hospital's interface engine | ≈$140K over 18 months | Reuses systems Halvian already has. Results go back into the EHR so nurses need no extra login. |
+| Patient messaging | **Twilio** SMS (BAA) + wristband QR web page + **4 kiosks** | ≈$30K over 18 months | No app or account needed, which is an equity choice for Medicaid and uninsured patients. Multiple languages. |
+| Staff dashboard | Web app embedded in the EHR (our demo), or the hospital's existing **Power BI / low-code platform** | ≈$120K build over 18 months | Runs on the existing EHR screen |
+
+**Lower-cost alternatives we considered:**
+- The EHR vendor's built-in AI modules. These are cheapest if licensed, but less transparent.
+- A self-hosted open-source model, which removes per-call fees but adds IT burden.
+- Rules only, with no ML for fast-track. This is the safest fallback, but it loses accuracy.
 
 ## 1.4 Technical design (3 pts)
-_Add a diagram: Registration/EHR → integration layer → scoring + fast-track model → dashboard / patient page → nurse decision → written back to EHR._
-- **Data used:** arrival time, age, arrival mode, chief complaint, vitals, ESI (acuity level), re-check times, confirmed symptom updates, room status. **Insurance is excluded from the model** and used only for fairness monitoring.
-- **Information flow:** describe each step and how often it refreshes (e.g. queue recalculated every minute).
-- **Where it runs:** Halvian's cloud tenant, so patient data stays in Halvian's environment.
-- **Cost:** link to [docs/BUDGET_ROI.md](docs/BUDGET_ROI.md).
-- **Scalability:** handles the winter surge (+20%) and Monday peaks; can later extend to other departments.
-- **Reliability:** if the tool goes down, triage continues as it does today: nurse-assigned ESI and a manual queue (see Risk §4.4).
-- **Maintenance:** owner, monthly model review, quarterly bias audit.
-- **Privacy & clinical risk:** collect only the identifiers needed, encrypt data in transit and at rest, use role-based access with audit logs, and tie the patient link to the wristband token, which expires at discharge.
+
+```mermaid
+flowchart LR
+  A[Registration + EHR<br/>arrival, ESI, vitals, complaint] -->|HL7/FHIR feed, every 1 min| B[Integration layer<br/>Halvian cloud tenant]
+  R[Room status<br/>staff update on dashboard] --> B
+  P[Patient page<br/>QR / SMS / kiosk] -->|symptom update| B
+  B --> C[Scoring engine<br/>points within ESI]
+  B --> D[Fast-track model<br/>logistic regression]
+  B --> E[Wait-range estimator]
+  C & D & E --> F[Staff dashboard<br/>shows reasons]
+  E --> P
+  F --> G{Nurse decides<br/>accept / override + reason}
+  G -->|written back| A
+  G --> L[(Audit + override log)]
+  L --> M[Monthly report → ED clinical committee]
+```
+
+- **Data used:** arrival time, age, arrival mode, chief complaint, vitals, ESI, re-check times, nurse-confirmed symptom updates, room status. **Insurance is excluded from every model** and used only in the fairness panel to compare waits, scores, overrides and LWBS by group.
+- **How information flows:**
+  1. Registration and triage data arrive from the EHR feed in near real time.
+  2. The queue is recalculated every minute.
+  3. Suggestions appear with their reasons on the dashboard.
+  4. Nothing changes a patient's position or stream until a nurse confirms.
+  5. Every decision is written back to the EHR and logged.
+- **Where it runs:** in Halvian's own cloud tenant under a BAA, so patient data never leaves Halvian's environment. The fast-track model is a short list of weights and runs anywhere, even in the browser.
+- **Cost:** ≈$700K over 18 months, then ≈$140K/yr to run (see [Budget & ROI](docs/BUDGET_ROI.md)).
+- **Scalability:**
+  - The scoring is lightweight: about 40–100 patients waiting, recalculated once a minute.
+  - It handles Monday peaks and the +20% winter surge with no added infrastructure.
+  - The same pattern can extend later to urgent care or other departments.
+- **Reliability:**
+  - If the tool or the feed fails, the dashboard shows an **"AI offline"** banner, and the queue falls back to ESI level, then arrival time.
+  - Triage then continues exactly as it does today, so staff need no new downtime procedure. The demo has this toggle.
+- **Maintenance:**
+  - Clinical informatics owns the tool, at about 0.3 FTE.
+  - The model is reviewed monthly.
+  - A bias audit runs quarterly.
+  - Retraining happens at month 13–15, and only after committee approval.
+- **Privacy & clinical risk:**
+  - Collect only the identifiers needed.
+  - Encrypt data in transit and at rest.
+  - Use role-based access with audit logs.
+  - The patient link is a wristband token that expires at discharge and shows no diagnosis.
+  - See [Risk §4.2](docs/RISK_SECURITY.md).
+
+## Demo-to-production mapping
+| Demo (synthetic) | Production |
+|---|---|
+| `data/patients.js`, 40 synthetic patients | Live EHR/registration feed |
+| `data/history.js`, 3,000 synthetic past visits | Halvian's historical triage data (de-identified for training) |
+| Fast-track model trained offline (`scripts/train_fasttrack.py`): AUC 0.98, bounce-back 3.3% at the 86% cutoff (target < 5%) | The same pipeline retrained and validated on real data during silent mode |
+| Room board clicked by hand | Same, replacing the phone and whiteboard; later, an EHR bed feed |

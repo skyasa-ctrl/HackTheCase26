@@ -53,7 +53,10 @@
     var turn = type === 'ed' ? ASSUME.edTurnMin : ASSUME.ftTurnMin;
     var s = summary().byType[type];
     var open = s.open + (type === 'ed' ? (extraEdOpen || 0) : 0);
-    var ahead = waiting().filter(function (p) { return p.esi <= esi; }).length;
+    // only count patients who compete for the same room type (ESI 1-3 -> ED rooms, ESI 4-5 -> fast-track)
+    var ahead = waiting().filter(function (p) {
+      return p.esi <= esi && (type === 'ed' ? p.esi <= 3 : p.esi >= 4);
+    }).length;
     var position = ahead + 1; // the person arriving now
     var base;
     if (position <= open) base = ASSUME.roomPrepMin;
