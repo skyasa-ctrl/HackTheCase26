@@ -1,0 +1,1171 @@
+[
+  {
+    "id": "P0001",
+    "arrival_time": "2026-11-23T07:15:00",
+    "age": 28,
+    "sex": "F",
+    "preferred_language": "zh",
+    "insurance": "medicaid",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "cough and fever",
+    "vitals": {
+      "hr": 84,
+      "sbp": 121,
+      "rr": 18,
+      "spo2": 97,
+      "temp_c": 37.0
+    },
+    "pain": 6,
+    "esi": 4,
+    "last_recheck_time": "2026-11-23T07:15:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": true,
+      "door_to_provider_min": 53
+    }
+  },
+  {
+    "id": "P0002",
+    "arrival_time": "2026-11-23T07:38:00",
+    "age": 40,
+    "sex": "M",
+    "preferred_language": "en",
+    "insurance": "medicaid",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "abdominal pain",
+    "vitals": {
+      "hr": 74,
+      "sbp": 118,
+      "rr": 20,
+      "spo2": 95,
+      "temp_c": 37.2
+    },
+    "pain": 1,
+    "esi": 4,
+    "last_recheck_time": "2026-11-23T07:38:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": true,
+      "door_to_provider_min": 25
+    }
+  },
+  {
+    "id": "P0003",
+    "arrival_time": "2026-11-23T07:43:00",
+    "age": 62,
+    "sex": "F",
+    "preferred_language": "en",
+    "insurance": "medicare",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "vomiting blood / GI bleeding",
+    "vitals": {
+      "hr": 72,
+      "sbp": 84,
+      "rr": 15,
+      "spo2": 97,
+      "temp_c": 37.2
+    },
+    "pain": 5,
+    "esi": 3,
+    "last_recheck_time": "2026-11-23T07:43:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": false,
+      "door_to_provider_min": 35
+    }
+  },
+  {
+    "id": "P0004",
+    "arrival_time": "2026-11-23T07:46:00",
+    "age": 4,
+    "sex": "M",
+    "preferred_language": "en",
+    "insurance": "commercial",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "chest pain",
+    "vitals": {
+      "hr": 104,
+      "sbp": 140,
+      "rr": 25,
+      "spo2": 96,
+      "temp_c": 36.4
+    },
+    "pain": 6,
+    "esi": 3,
+    "last_recheck_time": "2026-11-23T09:26:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": false,
+      "door_to_provider_min": 38
+    }
+  },
+  {
+    "id": "P0005",
+    "arrival_time": "2026-11-23T07:51:00",
+    "age": 18,
+    "sex": "M",
+    "preferred_language": "en",
+    "insurance": "uninsured",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "anxiety / panic",
+    "vitals": {
+      "hr": 116,
+      "sbp": 128,
+      "rr": 26,
+      "spo2": 89,
+      "temp_c": 36.8
+    },
+    "pain": 7,
+    "esi": 3,
+    "last_recheck_time": "2026-11-23T07:51:00",
+    "nurse_concern_flag": true,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": false,
+      "door_to_provider_min": 72
+    }
+  },
+  {
+    "id": "P0006",
+    "arrival_time": "2026-11-23T07:59:00",
+    "age": 43,
+    "sex": "M",
+    "preferred_language": "es",
+    "insurance": "medicaid",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "ankle injury",
+    "vitals": {
+      "hr": 83,
+      "sbp": 108,
+      "rr": 18,
+      "spo2": 97,
+      "temp_c": 39.2
+    },
+    "pain": 5,
+    "esi": 5,
+    "last_recheck_time": "2026-11-23T07:59:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": true,
+      "door_to_provider_min": 116
+    }
+  },
+  {
+    "id": "P0007",
+    "arrival_time": "2026-11-23T08:09:00",
+    "age": 16,
+    "sex": "M",
+    "preferred_language": "en",
+    "insurance": "medicaid",
+    "arrival_mode": "ambulance",
+    "chief_complaint": "shortness of breath",
+    "vitals": {
+      "hr": 115,
+      "sbp": 124,
+      "rr": 17,
+      "spo2": 91,
+      "temp_c": 36.3
+    },
+    "pain": 9,
+    "esi": 3,
+    "last_recheck_time": "2026-11-23T09:26:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "admitted",
+      "fast_track_appropriate": false,
+      "door_to_provider_min": 55
+    }
+  },
+  {
+    "id": "P0008",
+    "arrival_time": "2026-11-23T08:10:00",
+    "age": 85,
+    "sex": "M",
+    "preferred_language": "en",
+    "insurance": "medicare",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "asthma flare",
+    "vitals": {
+      "hr": 73,
+      "sbp": 207,
+      "rr": 16,
+      "spo2": 96,
+      "temp_c": 38.8
+    },
+    "pain": 8,
+    "esi": 3,
+    "last_recheck_time": "2026-11-23T09:55:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [
+      {
+        "time": "2026-11-23T09:35:00",
+        "symptoms": [
+          "new fever"
+        ],
+        "pain": 8,
+        "duration": "1 hour",
+        "confirmed_by": "RN Alvarez",
+        "red_flag": false
+      }
+    ],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": false,
+      "door_to_provider_min": 34
+    }
+  },
+  {
+    "id": "P0009",
+    "arrival_time": "2026-11-23T08:12:00",
+    "age": 65,
+    "sex": "M",
+    "preferred_language": "en",
+    "insurance": "medicare",
+    "arrival_mode": "ambulance",
+    "chief_complaint": "rash",
+    "vitals": {
+      "hr": 82,
+      "sbp": 149,
+      "rr": 17,
+      "spo2": 93,
+      "temp_c": 36.8
+    },
+    "pain": 5,
+    "esi": 4,
+    "last_recheck_time": "2026-11-23T08:12:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": false,
+      "door_to_provider_min": 93
+    }
+  },
+  {
+    "id": "P0010",
+    "arrival_time": "2026-11-23T08:17:00",
+    "age": 27,
+    "sex": "M",
+    "preferred_language": "en",
+    "insurance": "medicaid",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "intoxication",
+    "vitals": {
+      "hr": 86,
+      "sbp": 118,
+      "rr": 15,
+      "spo2": 96,
+      "temp_c": 36.5
+    },
+    "pain": 5,
+    "esi": 4,
+    "last_recheck_time": "2026-11-23T08:17:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": false,
+      "door_to_provider_min": 49
+    }
+  },
+  {
+    "id": "P0011",
+    "arrival_time": "2026-11-23T08:25:00",
+    "age": 37,
+    "sex": "F",
+    "preferred_language": "en",
+    "insurance": "uninsured",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "nausea",
+    "vitals": {
+      "hr": 81,
+      "sbp": 149,
+      "rr": 16,
+      "spo2": 95,
+      "temp_c": 36.5
+    },
+    "pain": 6,
+    "esi": 4,
+    "last_recheck_time": "2026-11-23T08:25:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": true,
+      "door_to_provider_min": 52
+    }
+  },
+  {
+    "id": "P0012",
+    "arrival_time": "2026-11-23T08:32:00",
+    "age": 11,
+    "sex": "F",
+    "preferred_language": "en",
+    "insurance": "commercial",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "vomiting and diarrhea",
+    "vitals": {
+      "hr": 68,
+      "sbp": 122,
+      "rr": 24,
+      "spo2": 98,
+      "temp_c": 36.7
+    },
+    "pain": 7,
+    "esi": 3,
+    "last_recheck_time": "2026-11-23T10:07:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": false,
+      "door_to_provider_min": 82
+    }
+  },
+  {
+    "id": "P0013",
+    "arrival_time": "2026-11-23T08:32:00",
+    "age": 26,
+    "sex": "F",
+    "preferred_language": "es",
+    "insurance": "medicaid",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "abdominal pain",
+    "vitals": {
+      "hr": 116,
+      "sbp": 94,
+      "rr": 26,
+      "spo2": 90,
+      "temp_c": 36.7
+    },
+    "pain": 5,
+    "esi": 3,
+    "last_recheck_time": "2026-11-23T09:19:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [
+      {
+        "time": "2026-11-23T10:12:00",
+        "symptoms": [
+          "pain getting worse",
+          "vomiting"
+        ],
+        "pain": 8,
+        "duration": "about 2 hours",
+        "confirmed_by": null,
+        "red_flag": false
+      }
+    ],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": false,
+      "door_to_provider_min": 43
+    }
+  },
+  {
+    "id": "P0014",
+    "arrival_time": "2026-11-23T08:33:00",
+    "age": 78,
+    "sex": "F",
+    "preferred_language": "en",
+    "insurance": "commercial",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "back pain",
+    "vitals": {
+      "hr": 130,
+      "sbp": 90,
+      "rr": 15,
+      "spo2": 98,
+      "temp_c": 36.5
+    },
+    "pain": 4,
+    "esi": 3,
+    "last_recheck_time": "2026-11-23T08:33:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": false,
+      "door_to_provider_min": 34
+    }
+  },
+  {
+    "id": "P0015",
+    "arrival_time": "2026-11-23T08:33:00",
+    "age": 76,
+    "sex": "M",
+    "preferred_language": "en",
+    "insurance": "medicare",
+    "arrival_mode": "ambulance",
+    "chief_complaint": "allergic reaction",
+    "vitals": {
+      "hr": 105,
+      "sbp": 116,
+      "rr": 22,
+      "spo2": 91,
+      "temp_c": 38.6
+    },
+    "pain": 3,
+    "esi": 3,
+    "last_recheck_time": "2026-11-23T08:33:00",
+    "nurse_concern_flag": true,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": false,
+      "door_to_provider_min": 50
+    }
+  },
+  {
+    "id": "P0016",
+    "arrival_time": "2026-11-23T08:41:00",
+    "age": 55,
+    "sex": "M",
+    "preferred_language": "en",
+    "insurance": "other",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "abscess",
+    "vitals": {
+      "hr": 87,
+      "sbp": 102,
+      "rr": 18,
+      "spo2": 97,
+      "temp_c": 37.5
+    },
+    "pain": 3,
+    "esi": 4,
+    "last_recheck_time": "2026-11-23T08:41:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": true,
+      "door_to_provider_min": 71
+    }
+  },
+  {
+    "id": "P0017",
+    "arrival_time": "2026-11-23T08:43:00",
+    "age": 50,
+    "sex": "F",
+    "preferred_language": "en",
+    "insurance": "medicaid",
+    "arrival_mode": "ambulance",
+    "chief_complaint": "stroke symptoms",
+    "vitals": {
+      "hr": 75,
+      "sbp": 119,
+      "rr": 18,
+      "spo2": 91,
+      "temp_c": 37.3
+    },
+    "pain": 5,
+    "esi": 2,
+    "last_recheck_time": "2026-11-23T09:44:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": false,
+      "door_to_provider_min": 8
+    }
+  },
+  {
+    "id": "P0018",
+    "arrival_time": "2026-11-23T08:46:00",
+    "age": 38,
+    "sex": "M",
+    "preferred_language": "es",
+    "insurance": "commercial",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "ankle injury",
+    "vitals": {
+      "hr": 74,
+      "sbp": 139,
+      "rr": 16,
+      "spo2": 95,
+      "temp_c": 39.0
+    },
+    "pain": 5,
+    "esi": 4,
+    "last_recheck_time": "2026-11-23T08:46:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [
+      {
+        "time": "2026-11-23T09:58:00",
+        "symptoms": [
+          "more swelling",
+          "pain when standing"
+        ],
+        "pain": 7,
+        "duration": "since this morning",
+        "confirmed_by": null,
+        "red_flag": false
+      }
+    ],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "lwbs",
+      "fast_track_appropriate": true,
+      "door_to_provider_min": null,
+      "left_after_min": 74
+    }
+  },
+  {
+    "id": "P0019",
+    "arrival_time": "2026-11-23T08:54:00",
+    "age": 25,
+    "sex": "M",
+    "preferred_language": "en",
+    "insurance": "medicaid",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "intoxication",
+    "vitals": {
+      "hr": 121,
+      "sbp": 126,
+      "rr": 24,
+      "spo2": 93,
+      "temp_c": 36.9
+    },
+    "pain": 8,
+    "esi": 3,
+    "last_recheck_time": "2026-11-23T09:49:00",
+    "nurse_concern_flag": true,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": false,
+      "door_to_provider_min": 84
+    }
+  },
+  {
+    "id": "P0020",
+    "arrival_time": "2026-11-23T08:55:00",
+    "age": 55,
+    "sex": "M",
+    "preferred_language": "en",
+    "insurance": "commercial",
+    "arrival_mode": "ambulance",
+    "chief_complaint": "stroke symptoms",
+    "vitals": {
+      "hr": 120,
+      "sbp": 134,
+      "rr": 15,
+      "spo2": 98,
+      "temp_c": 38.9
+    },
+    "pain": 3,
+    "esi": 2,
+    "last_recheck_time": "2026-11-23T08:55:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "roomed",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": false,
+      "door_to_provider_min": 18
+    }
+  },
+  {
+    "id": "P0021",
+    "arrival_time": "2026-11-23T08:57:00",
+    "age": 53,
+    "sex": "M",
+    "preferred_language": "en",
+    "insurance": "medicaid",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "knee pain",
+    "vitals": {
+      "hr": 79,
+      "sbp": 109,
+      "rr": 16,
+      "spo2": 97,
+      "temp_c": 36.9
+    },
+    "pain": 6,
+    "esi": 4,
+    "last_recheck_time": "2026-11-23T08:57:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": true,
+      "door_to_provider_min": 86
+    }
+  },
+  {
+    "id": "P0022",
+    "arrival_time": "2026-11-23T09:00:00",
+    "age": 18,
+    "sex": "M",
+    "preferred_language": "en",
+    "insurance": "commercial",
+    "arrival_mode": "ambulance",
+    "chief_complaint": "abdominal pain",
+    "vitals": {
+      "hr": 68,
+      "sbp": 132,
+      "rr": 12,
+      "spo2": 93,
+      "temp_c": 36.8
+    },
+    "pain": 4,
+    "esi": 2,
+    "last_recheck_time": "2026-11-23T09:56:00",
+    "nurse_concern_flag": true,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "admitted",
+      "fast_track_appropriate": false,
+      "door_to_provider_min": 11
+    }
+  },
+  {
+    "id": "P0023",
+    "arrival_time": "2026-11-23T09:03:00",
+    "age": 76,
+    "sex": "M",
+    "preferred_language": "so",
+    "insurance": "medicare",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "dizziness",
+    "vitals": {
+      "hr": 86,
+      "sbp": 187,
+      "rr": 27,
+      "spo2": 85,
+      "temp_c": 36.6
+    },
+    "pain": 7,
+    "esi": 3,
+    "last_recheck_time": "2026-11-23T09:23:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [
+      {
+        "time": "2026-11-23T10:24:00",
+        "symptoms": [
+          "chest pressure",
+          "trouble breathing"
+        ],
+        "pain": 6,
+        "duration": "started 10 minutes ago",
+        "confirmed_by": null,
+        "red_flag": true,
+        "nurse_paged": true
+      }
+    ],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": false,
+      "door_to_provider_min": 85
+    }
+  },
+  {
+    "id": "P0024",
+    "arrival_time": "2026-11-23T09:03:00",
+    "age": 62,
+    "sex": "F",
+    "preferred_language": "en",
+    "insurance": "medicare",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "chest pain",
+    "vitals": {
+      "hr": 132,
+      "sbp": 114,
+      "rr": 28,
+      "spo2": 99,
+      "temp_c": 36.5
+    },
+    "pain": 8,
+    "esi": 3,
+    "last_recheck_time": "2026-11-23T10:18:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": false,
+      "door_to_provider_min": 52
+    }
+  },
+  {
+    "id": "P0025",
+    "arrival_time": "2026-11-23T09:06:00",
+    "age": 11,
+    "sex": "F",
+    "preferred_language": "en",
+    "insurance": "medicaid",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "motor vehicle collision",
+    "vitals": {
+      "hr": 79,
+      "sbp": 130,
+      "rr": 16,
+      "spo2": 95,
+      "temp_c": 38.2
+    },
+    "pain": 7,
+    "esi": 3,
+    "last_recheck_time": "2026-11-23T09:53:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "admitted",
+      "fast_track_appropriate": false,
+      "door_to_provider_min": 33
+    }
+  },
+  {
+    "id": "P0026",
+    "arrival_time": "2026-11-23T09:08:00",
+    "age": 60,
+    "sex": "M",
+    "preferred_language": "en",
+    "insurance": "medicare",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "cough and fever",
+    "vitals": {
+      "hr": 135,
+      "sbp": 113,
+      "rr": 14,
+      "spo2": 95,
+      "temp_c": 36.9
+    },
+    "pain": 3,
+    "esi": 4,
+    "last_recheck_time": "2026-11-23T10:24:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": true,
+      "door_to_provider_min": 92
+    }
+  },
+  {
+    "id": "P0027",
+    "arrival_time": "2026-11-23T09:12:00",
+    "age": 57,
+    "sex": "M",
+    "preferred_language": "es",
+    "insurance": "commercial",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "anxiety / panic",
+    "vitals": {
+      "hr": 62,
+      "sbp": 136,
+      "rr": 15,
+      "spo2": 98,
+      "temp_c": 36.7
+    },
+    "pain": 4,
+    "esi": 4,
+    "last_recheck_time": "2026-11-23T10:23:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": true,
+      "door_to_provider_min": 122
+    }
+  },
+  {
+    "id": "P0028",
+    "arrival_time": "2026-11-23T09:15:00",
+    "age": 28,
+    "sex": "F",
+    "preferred_language": "en",
+    "insurance": "medicaid",
+    "arrival_mode": "ambulance",
+    "chief_complaint": "cardiac arrest, pulse returned",
+    "vitals": {
+      "hr": 127,
+      "sbp": 171,
+      "rr": 25,
+      "spo2": 86,
+      "temp_c": 37.9
+    },
+    "pain": 3,
+    "esi": 1,
+    "last_recheck_time": "2026-11-23T09:15:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": false,
+      "door_to_provider_min": 1
+    }
+  },
+  {
+    "id": "P0029",
+    "arrival_time": "2026-11-23T09:17:00",
+    "age": 46,
+    "sex": "F",
+    "preferred_language": "en",
+    "insurance": "commercial",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "minor burn",
+    "vitals": {
+      "hr": 75,
+      "sbp": 125,
+      "rr": 18,
+      "spo2": 99,
+      "temp_c": 36.7
+    },
+    "pain": 1,
+    "esi": 5,
+    "last_recheck_time": "2026-11-23T09:49:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": true,
+      "door_to_provider_min": 78
+    }
+  },
+  {
+    "id": "P0030",
+    "arrival_time": "2026-11-23T09:18:00",
+    "age": 57,
+    "sex": "F",
+    "preferred_language": "es",
+    "insurance": "commercial",
+    "arrival_mode": "ambulance",
+    "chief_complaint": "syncope",
+    "vitals": {
+      "hr": 71,
+      "sbp": 127,
+      "rr": 14,
+      "spo2": 95,
+      "temp_c": 37.0
+    },
+    "pain": 5,
+    "esi": 3,
+    "last_recheck_time": "2026-11-23T10:19:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": false,
+      "door_to_provider_min": 67
+    }
+  },
+  {
+    "id": "P0031",
+    "arrival_time": "2026-11-23T09:20:00",
+    "age": 64,
+    "sex": "F",
+    "preferred_language": "vi",
+    "insurance": "medicare",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "sore throat",
+    "vitals": {
+      "hr": 94,
+      "sbp": 113,
+      "rr": 18,
+      "spo2": 98,
+      "temp_c": 36.6
+    },
+    "pain": 5,
+    "esi": 4,
+    "last_recheck_time": "2026-11-23T10:03:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "fast-track",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": true,
+      "door_to_provider_min": 73
+    }
+  },
+  {
+    "id": "P0032",
+    "arrival_time": "2026-11-23T09:36:00",
+    "age": 9,
+    "sex": "M",
+    "preferred_language": "en",
+    "insurance": "medicaid",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "general weakness",
+    "vitals": {
+      "hr": 100,
+      "sbp": 124,
+      "rr": 13,
+      "spo2": 97,
+      "temp_c": 36.9
+    },
+    "pain": 5,
+    "esi": 4,
+    "last_recheck_time": "2026-11-23T10:22:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "fast-track",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": true,
+      "door_to_provider_min": 55
+    }
+  },
+  {
+    "id": "P0033",
+    "arrival_time": "2026-11-23T09:45:00",
+    "age": 39,
+    "sex": "F",
+    "preferred_language": "es",
+    "insurance": "commercial",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "cold symptoms",
+    "vitals": {
+      "hr": 76,
+      "sbp": 120,
+      "rr": 16,
+      "spo2": 96,
+      "temp_c": 36.8
+    },
+    "pain": 5,
+    "esi": 5,
+    "last_recheck_time": "2026-11-23T09:45:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": true,
+      "door_to_provider_min": 169
+    }
+  },
+  {
+    "id": "P0034",
+    "arrival_time": "2026-11-23T09:46:00",
+    "age": 18,
+    "sex": "M",
+    "preferred_language": "en",
+    "insurance": "uninsured",
+    "arrival_mode": "ambulance",
+    "chief_complaint": "COPD flare",
+    "vitals": {
+      "hr": 67,
+      "sbp": 123,
+      "rr": 17,
+      "spo2": 85,
+      "temp_c": 39.2
+    },
+    "pain": 6,
+    "esi": 2,
+    "last_recheck_time": "2026-11-23T09:46:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": false,
+      "door_to_provider_min": 12
+    }
+  },
+  {
+    "id": "P0035",
+    "arrival_time": "2026-11-23T09:48:00",
+    "age": 40,
+    "sex": "F",
+    "preferred_language": "en",
+    "insurance": "commercial",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "rash",
+    "vitals": {
+      "hr": 74,
+      "sbp": 124,
+      "rr": 16,
+      "spo2": 96,
+      "temp_c": 36.3
+    },
+    "pain": 4,
+    "esi": 5,
+    "last_recheck_time": "2026-11-23T09:48:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": true,
+      "door_to_provider_min": 174
+    }
+  },
+  {
+    "id": "P0036",
+    "arrival_time": "2026-11-23T09:49:00",
+    "age": 15,
+    "sex": "F",
+    "preferred_language": "en",
+    "insurance": "medicaid",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "back pain",
+    "vitals": {
+      "hr": 115,
+      "sbp": 137,
+      "rr": 13,
+      "spo2": 98,
+      "temp_c": 36.5
+    },
+    "pain": 8,
+    "esi": 4,
+    "last_recheck_time": "2026-11-23T09:49:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": false,
+      "door_to_provider_min": 153
+    }
+  },
+  {
+    "id": "P0037",
+    "arrival_time": "2026-11-23T09:49:00",
+    "age": 9,
+    "sex": "F",
+    "preferred_language": "en",
+    "insurance": "medicaid",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "urinary symptoms",
+    "vitals": {
+      "hr": 74,
+      "sbp": 137,
+      "rr": 18,
+      "spo2": 97,
+      "temp_c": 36.7
+    },
+    "pain": 7,
+    "esi": 5,
+    "last_recheck_time": "2026-11-23T09:49:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": true,
+      "door_to_provider_min": 76
+    }
+  },
+  {
+    "id": "P0038",
+    "arrival_time": "2026-11-23T09:50:00",
+    "age": 79,
+    "sex": "M",
+    "preferred_language": "es",
+    "insurance": "medicare",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "insect bite",
+    "vitals": {
+      "hr": 98,
+      "sbp": 111,
+      "rr": 14,
+      "spo2": 98,
+      "temp_c": 36.4
+    },
+    "pain": 3,
+    "esi": 4,
+    "last_recheck_time": "2026-11-23T09:50:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": true,
+      "door_to_provider_min": 64
+    }
+  },
+  {
+    "id": "P0039",
+    "arrival_time": "2026-11-23T09:53:00",
+    "age": 10,
+    "sex": "F",
+    "preferred_language": "en",
+    "insurance": "commercial",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "dizziness",
+    "vitals": {
+      "hr": 91,
+      "sbp": 182,
+      "rr": 16,
+      "spo2": 97,
+      "temp_c": 36.8
+    },
+    "pain": 6,
+    "esi": 3,
+    "last_recheck_time": "2026-11-23T09:53:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": false,
+      "door_to_provider_min": 48
+    }
+  },
+  {
+    "id": "P0040",
+    "arrival_time": "2026-11-23T10:07:00",
+    "age": 43,
+    "sex": "F",
+    "preferred_language": "en",
+    "insurance": "commercial",
+    "arrival_mode": "walk-in",
+    "chief_complaint": "nausea",
+    "vitals": {
+      "hr": 72,
+      "sbp": 103,
+      "rr": 21,
+      "spo2": 96,
+      "temp_c": 37.0
+    },
+    "pain": 4,
+    "esi": 5,
+    "last_recheck_time": "2026-11-23T10:07:00",
+    "nurse_concern_flag": false,
+    "symptom_updates": [],
+    "status": "waiting",
+    "outcome": {
+      "disposition": "discharged",
+      "fast_track_appropriate": true,
+      "door_to_provider_min": 32
+    }
+  }
+]

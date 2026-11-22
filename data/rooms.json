@@ -1,0 +1,338 @@
+[
+ {
+  "id": "ED-01",
+  "type": "ed",
+  "status": "open",
+  "patient_id": null,
+  "since": "2026-11-23T10:25:00"
+ },
+ {
+  "id": "ED-02",
+  "type": "ed",
+  "status": "cleaning",
+  "patient_id": null,
+  "since": "2026-11-23T10:24:00"
+ },
+ {
+  "id": "ED-03",
+  "type": "ed",
+  "status": "occupied",
+  "patient_id": "P0020",
+  "since": "2026-11-23T08:56:00"
+ },
+ {
+  "id": "ED-04",
+  "type": "ed",
+  "status": "boarding",
+  "patient_id": "B004",
+  "since": "2026-11-23T07:48:00"
+ },
+ {
+  "id": "ED-05",
+  "type": "ed",
+  "status": "occupied",
+  "patient_id": "P0904",
+  "since": "2026-11-23T09:45:00"
+ },
+ {
+  "id": "ED-06",
+  "type": "ed",
+  "status": "cleaning",
+  "patient_id": null,
+  "since": "2026-11-23T10:15:00"
+ },
+ {
+  "id": "ED-07",
+  "type": "ed",
+  "status": "boarding",
+  "patient_id": "B007",
+  "since": "2026-11-23T01:50:00"
+ },
+ {
+  "id": "ED-08",
+  "type": "ed",
+  "status": "boarding",
+  "patient_id": "B008",
+  "since": "2026-11-23T04:25:00"
+ },
+ {
+  "id": "ED-09",
+  "type": "ed",
+  "status": "occupied",
+  "patient_id": "P0908",
+  "since": "2026-11-23T10:12:00"
+ },
+ {
+  "id": "ED-10",
+  "type": "ed",
+  "status": "occupied",
+  "patient_id": "P0909",
+  "since": "2026-11-23T08:11:00"
+ },
+ {
+  "id": "ED-11",
+  "type": "ed",
+  "status": "occupied",
+  "patient_id": "P0910",
+  "since": "2026-11-23T09:17:00"
+ },
+ {
+  "id": "ED-12",
+  "type": "ed",
+  "status": "open",
+  "patient_id": null,
+  "since": "2026-11-23T09:38:00"
+ },
+ {
+  "id": "ED-13",
+  "type": "ed",
+  "status": "open",
+  "patient_id": null,
+  "since": "2026-11-23T10:12:00"
+ },
+ {
+  "id": "ED-14",
+  "type": "ed",
+  "status": "boarding",
+  "patient_id": "B014",
+  "since": "2026-11-23T04:56:00"
+ },
+ {
+  "id": "ED-15",
+  "type": "ed",
+  "status": "open",
+  "patient_id": null,
+  "since": "2026-11-23T10:12:00"
+ },
+ {
+  "id": "ED-16",
+  "type": "ed",
+  "status": "open",
+  "patient_id": null,
+  "since": "2026-11-23T10:07:00"
+ },
+ {
+  "id": "ED-17",
+  "type": "ed",
+  "status": "occupied",
+  "patient_id": "P0916",
+  "since": "2026-11-23T08:34:00"
+ },
+ {
+  "id": "ED-18",
+  "type": "ed",
+  "status": "occupied",
+  "patient_id": "P0917",
+  "since": "2026-11-23T10:17:00"
+ },
+ {
+  "id": "ED-19",
+  "type": "ed",
+  "status": "boarding",
+  "patient_id": "B019",
+  "since": "2026-11-23T00:21:00"
+ },
+ {
+  "id": "ED-20",
+  "type": "ed",
+  "status": "boarding",
+  "patient_id": "B020",
+  "since": "2026-11-23T04:51:00"
+ },
+ {
+  "id": "ED-21",
+  "type": "ed",
+  "status": "occupied",
+  "patient_id": "P0920",
+  "since": "2026-11-23T08:54:00"
+ },
+ {
+  "id": "ED-22",
+  "type": "ed",
+  "status": "occupied",
+  "patient_id": "P0921",
+  "since": "2026-11-23T08:48:00"
+ },
+ {
+  "id": "ED-23",
+  "type": "ed",
+  "status": "occupied",
+  "patient_id": "P0922",
+  "since": "2026-11-23T09:32:00"
+ },
+ {
+  "id": "ED-24",
+  "type": "ed",
+  "status": "occupied",
+  "patient_id": "P0923",
+  "since": "2026-11-23T10:15:00"
+ },
+ {
+  "id": "ED-25",
+  "type": "ed",
+  "status": "open",
+  "patient_id": null,
+  "since": "2026-11-23T09:06:00"
+ },
+ {
+  "id": "ED-26",
+  "type": "ed",
+  "status": "occupied",
+  "patient_id": "P0925",
+  "since": "2026-11-23T09:07:00"
+ },
+ {
+  "id": "ED-27",
+  "type": "ed",
+  "status": "cleaning",
+  "patient_id": null,
+  "since": "2026-11-23T10:27:00"
+ },
+ {
+  "id": "ED-28",
+  "type": "ed",
+  "status": "boarding",
+  "patient_id": "B028",
+  "since": "2026-11-23T00:44:00"
+ },
+ {
+  "id": "ED-29",
+  "type": "ed",
+  "status": "open",
+  "patient_id": null,
+  "since": "2026-11-23T10:03:00"
+ },
+ {
+  "id": "ED-30",
+  "type": "ed",
+  "status": "open",
+  "patient_id": null,
+  "since": "2026-11-23T09:29:00"
+ },
+ {
+  "id": "ED-31",
+  "type": "ed",
+  "status": "occupied",
+  "patient_id": "P0930",
+  "since": "2026-11-23T10:15:00"
+ },
+ {
+  "id": "ED-32",
+  "type": "ed",
+  "status": "occupied",
+  "patient_id": "P0931",
+  "since": "2026-11-23T08:10:00"
+ },
+ {
+  "id": "FT-01",
+  "type": "fast_track",
+  "status": "occupied",
+  "patient_id": "P0031",
+  "since": "2026-11-23T09:24:00"
+ },
+ {
+  "id": "FT-02",
+  "type": "fast_track",
+  "status": "occupied",
+  "patient_id": "P0032",
+  "since": "2026-11-23T09:28:00"
+ },
+ {
+  "id": "FT-03",
+  "type": "fast_track",
+  "status": "occupied",
+  "patient_id": "P0952",
+  "since": "2026-11-23T10:04:00"
+ },
+ {
+  "id": "FT-04",
+  "type": "fast_track",
+  "status": "cleaning",
+  "patient_id": null,
+  "since": "2026-11-23T09:39:00"
+ },
+ {
+  "id": "FT-05",
+  "type": "fast_track",
+  "status": "open",
+  "patient_id": null,
+  "since": "2026-11-23T10:11:00"
+ },
+ {
+  "id": "FT-06",
+  "type": "fast_track",
+  "status": "open",
+  "patient_id": null,
+  "since": "2026-11-23T09:36:00"
+ },
+ {
+  "id": "FT-07",
+  "type": "fast_track",
+  "status": "open",
+  "patient_id": null,
+  "since": "2026-11-23T10:20:00"
+ },
+ {
+  "id": "FT-08",
+  "type": "fast_track",
+  "status": "open",
+  "patient_id": null,
+  "since": "2026-11-23T09:33:00"
+ },
+ {
+  "id": "RES-01",
+  "type": "resus",
+  "status": "occupied",
+  "patient_id": "P0990",
+  "since": "2026-11-23T09:46:00"
+ },
+ {
+  "id": "RES-02",
+  "type": "resus",
+  "status": "cleaning",
+  "patient_id": null,
+  "since": "2026-11-23T10:18:00"
+ },
+ {
+  "id": "RES-03",
+  "type": "resus",
+  "status": "open",
+  "patient_id": null,
+  "since": "2026-11-23T09:15:00"
+ },
+ {
+  "id": "RES-04",
+  "type": "resus",
+  "status": "open",
+  "patient_id": null,
+  "since": "2026-11-23T09:47:00"
+ },
+ {
+  "id": "BH-01",
+  "type": "behavioral",
+  "status": "occupied",
+  "patient_id": "P0991",
+  "since": "2026-11-23T08:16:00"
+ },
+ {
+  "id": "BH-02",
+  "type": "behavioral",
+  "status": "boarding",
+  "patient_id": "B101",
+  "since": "2026-11-23T01:16:00"
+ },
+ {
+  "id": "BH-03",
+  "type": "behavioral",
+  "status": "open",
+  "patient_id": null,
+  "since": "2026-11-23T07:37:00"
+ },
+ {
+  "id": "BH-04",
+  "type": "behavioral",
+  "status": "open",
+  "patient_id": null,
+  "since": "2026-11-23T07:10:00"
+ }
+]

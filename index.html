@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Halvian ED Triage Assistant</title>
+  <link rel="stylesheet" href="src/shared/styles.css">
+</head>
+<body>
+  <div class="banner-synthetic" role="note">Synthetic data — demo only</div>
+  <header class="app-header">
+    <h1>Halvian ED Triage Assistant</h1>
+    <span class="clock" id="demo-clock"></span>
+    <span class="spacer"></span>
+    <label class="switch" for="ai-offline-toggle">
+      <input type="checkbox" id="ai-offline-toggle" role="switch">
+      <span>AI offline</span>
+    </label>
+  </header>
+  <div class="banner-warning in-app" id="ai-offline-banner" role="status" hidden>
+    AI is offline. Suggestions are paused and the queue falls back to acuity (ESI) level, then arrival time. Nurses keep full control.
+  </div>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" id="tab-queue" data-tab="queue" aria-controls="panel-queue" aria-selected="true">Queue</button>
+    <button class="tab" role="tab" id="tab-fasttrack" data-tab="fasttrack" aria-controls="panel-fasttrack" aria-selected="false" tabindex="-1">Fast-track</button>
+    <button class="tab" role="tab" id="tab-capacity" data-tab="capacity" aria-controls="panel-capacity" aria-selected="false" tabindex="-1">Capacity</button>
+    <button class="tab" role="tab" id="tab-patient" data-tab="patient" aria-controls="panel-patient" aria-selected="false" tabindex="-1">Patient view</button>
+  </nav>
+
+  <main>
+    <section role="tabpanel" id="panel-queue" aria-labelledby="tab-queue"><div id="mod-ranking"></div></section>
+    <section role="tabpanel" id="panel-fasttrack" aria-labelledby="tab-fasttrack" hidden><div id="mod-fasttrack"></div></section>
+    <section role="tabpanel" id="panel-capacity" aria-labelledby="tab-capacity" hidden><div id="mod-capacity"></div></section>
+    <section role="tabpanel" id="panel-patient" aria-labelledby="tab-patient" hidden><div id="mod-patientview"></div></section>
+  </main>
+
+  <noscript><p class="banner-warning">This demo needs JavaScript enabled.</p></noscript>
+
+  <!-- Classic scripts only (no modules, no fetch) so this works when double-clicked (file://). -->
+  <script src="data/patients.js"></script>
+  <script src="data/history.js"></script>
+  <script src="data/rooms.js"></script>
+  <script src="data/fasttrack_model.js"></script>
+  <script src="src/shared/core.js"></script>
+  <script src="src/ranking/ranking.js"></script>
+  <script src="src/fasttrack/fasttrack.js"></script>
+  <script src="src/fasttrack/patientview.js"></script>
+  <script src="src/capacity/capacity.js"></script>
+</body>
+</html>
