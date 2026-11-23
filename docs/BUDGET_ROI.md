@@ -29,27 +29,33 @@ Status: 🟢 complete draft. All rates are the case's cost figures (see [CONTEXT
 - **Rules only, no ML:** cheapest, but loses fast-track accuracy.
 
 ## 3.2 Value vs the traditional approach
-**Value at full scale (annual):**
+**How we value a recovered visit.** The case gives $1,500 as average *revenue* per ED visit. Revenue isn't profit: treating a patient who would otherwise have left also costs money. So we value each recovered visit at its **contribution margin**, in two steps:
+1. **Payer-mix haircut:** recovered patients skew uninsured and low-acuity, so they bring in about half the average: $1,500 × 50% = **$750 net revenue** **(A)**.
+2. **Contribution margin:** most ED costs (building, staff on shift, equipment) are already paid. The extra cost of one more low-acuity visit is mainly supplies, tests and staff minutes. We assume **40% of net revenue is margin**: $750 × 40% = **$300 per recovered visit** **(A)**.
+
+**Value at full scale (annual, conservative):**
 | Source | Math | Value/yr |
 |---|---|---|
-| LWBS recovery (full) | 4.0% → 2.5% of 85,000 = 1,275 visits × $1,500 | $1.91M |
-| LWBS recovery (**conservative**, used for ROI) | Same visits × $750 (50% haircut, because recovered patients skew uninsured and low-acuity) | **$0.96M** |
-| Nurse time saved | ≈1 hr per shift on manual sorting, re-checks and "how long?" questions × 3 shifts × 365 = 1,095 hrs × $65 | **$0.07M** |
-| **Total (conservative)** | | **≈ $1.03M** |
+| LWBS recovery | 4.0% → 2.5% of 85,000 = 1,275 recovered visits × $300 contribution | **$383K** |
+| Nurse time freed | ≈1 hr per shift on manual sorting, re-checks and "how long?" questions × 3 shifts × 365 = 1,095 hrs × $65 | **$71K** (capacity, not cash) |
+| **Total (conservative)** | | **≈ $454K** |
+| *For reference: net revenue recovered* | *1,275 × $750* | *$956K (cash collected, before costs of care)* |
 
-We do **not** count the boarding savings ($350 per bed-hour). Boarding isn't our focus area, so leaving it out keeps the case conservative.
+We do **not** count boarding savings ($350 per bed-hour). Boarding isn't our focus area, so leaving it out keeps the case conservative.
 
 **Traditional alternative: add one triage nurse 24/7**
-- 8,760 hrs × $65 = **$569K/yr**, or **$854K/yr** if covered with overtime at 1.5×.
+- 8,760 hrs × $65 = **$569K/yr**, or **$854K/yr** if covered with overtime at 1.5×. Benefits are excluded, so this understates the true cost.
 - That's every year, permanently, and it doesn't fix how the queue is ordered, the equity gap, or the lack of patient updates.
-- **Our tool costs ≈$467K/yr while it's being built (≈$700K over 18 months), then ≈$140K/yr**, which is about a quarter of the cost of one added nurse at year-2 run cost.
+- **Our tool:** ≈$700K over 18 months, then ≈$140K/yr.
+- **Cumulative cost crossover:** by **Month 11**, the tool has cost less in total than the extra nurse would have ($512K vs $522K). After that, the gap widens by about **$430K a year**.
 
 **Least certain assumptions (most uncertain first):**
-1. **How much of the LWBS drop is due to the tool.** Other changes (staffing, seasonal volume) also move LWBS. *Check:* compare pilot shifts with non-pilot shifts.
-2. **Revenue per recovered visit.** Recovered visits skew uninsured and low-acuity, so they earn less than the $1,500 average. That's why we use a 50% haircut.
-3. **EHR integration cost.** Vendor quotes vary widely. A 50% overrun ($70K) still fits within contingency plus headroom.
-4. **Nurse adoption.** Value depends on nurses actually using the suggestions.
-5. **Patient-link uptake** among patients without smartphones. The kiosks are our hedge.
+1. **How much of the LWBS drop is due to the tool.** Other changes (staffing, seasonal volume) also move LWBS. *Check:* compare pilot shifts with the same shifts last year, adjusted for volume (see Roadmap gate criteria).
+2. **Contribution margin per recovered visit ($300).** It depends on Halvian's cost structure; finance can confirm it in Month 1. At 25% margin the Year-2 ROI is still about 120%.
+3. **Revenue per recovered visit.** Recovered visits skew uninsured and low-acuity, so they earn less than the $1,500 average. That's why we apply the 50% haircut.
+4. **EHR integration cost.** Vendor quotes vary widely. A 50% overrun ($70K) still fits within contingency plus headroom.
+5. **Nurse adoption.** Value depends on nurses actually using the suggestions; adoption is a pilot gate.
+6. **Patient-link uptake** among patients without smartphones. Kiosks and nurse rounding are our hedge.
 
 ## 3.3 KPIs & ROI
 | KPI | Baseline | Month-18 target |
@@ -57,16 +63,21 @@ We do **not** count the boarding savings ($350 per bed-hour). Boarding isn't our
 | Median door-to-provider | 55 min | ≤ 40 min |
 | LWBS | 4.0% | ≤ 2.5% |
 | Fast-track share of ESI 4–5 visits | measured in silent mode | +25% over baseline **(A)** |
-| Cost per ED visit for the tool | — | ≈ $1.65 in year 2 ($140K / 85,000) |
-| **Equity KPI:** uninsured vs commercial wait gap | 16 min | ≤ 8 min |
+| Cost per ED visit for the tool | — | ≈ $1.65 in Year 2 ($140K / 85,000) |
+| **Equity KPI:** same-acuity wait gap, uninsured and Medicaid vs commercial | Overall gap 16 min (uninsured), 10 min (Medicaid); same-acuity baseline set in Month 2 | Halved (overall uninsured gap ≤ 8 min) |
 | **Equity KPI:** uninsured LWBS | 5.8% | ≤ 3.5% |
-| **Equity KPI:** patient-link uptake by payer group | — | Within 10 points across groups |
+| **Equity KPI:** Medicaid LWBS | 4.6% | ≤ 3.3% |
+| **Equity KPI:** patient-link reach by payer group | — | Within 10 points across groups |
 
-**ROI**
-- **During build** (annualized cost $467K): ROI = ($1.03M − $0.47M) / $0.47M ≈ **121%**
-- **Year 2** (run cost $140K): ROI = ($1.03M − $0.14M) / $0.14M ≈ **640%**
-- **Using full LWBS value, no haircut** ($1.98M): build-phase ROI ≈ **324%**
+**Headline: break-even, not ROI percentages.**
+- **Year 2:** the $140K run cost is covered by **467 recovered visits** at $300 each. That's an LWBS drop of just **0.55 points (4.0% → 3.45%)**, well short of our 1.5-point target.
+- **Against hiring:** the tool is cheaper than one added 24/7 triage nurse from **Month 11** onward.
 
-**Break-even:**
-- At $1,500/visit, $467K/yr is covered by **311 recovered visits**. That's an LWBS drop of only **0.4 points (4.0% → 3.6%)**.
-- Even at the conservative $750/visit, 623 visits are needed, an LWBS drop to **3.3%**.
+**ROI (contribution-margin basis):**
+- **Year 2** (run cost $140K): ($454K − $140K) / $140K ≈ **224%**
+- **During the 18-month build** (annualized cost $467K): value roughly equals cost (≈ −3%). On margin alone, cumulative payback comes around **Month 29**, allowing for the pilot ramp-up.
+- **Including the avoided cost of the extra nurse** (the realistic alternative if Halvian acts on its 4% LWBS), payback comes within the first year.
+- **Sensitivity:**
+  - At 25% contribution margin: Year-2 ROI ≈ 120%.
+  - If LWBS only falls to 3.0% (850 visits): Year-2 ROI ≈ 133%.
+  - On a revenue basis ($750 per visit, before costs of care): Year-2 ROI would be about 630%. We don't headline this number because it ignores the cost of treating recovered patients.

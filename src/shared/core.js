@@ -11,7 +11,7 @@
  *   Halvian.registerModule(name, {mount(containerEl)})   names: ranking | fasttrack | capacity | patientview
  *   Halvian.getPatient(id), Halvian.updatePatient(id, changes, source)
  *   Halvian.setAiOffline(bool)
- *   Halvian.logSymptomUpdate({patient_id, symptoms[], pain, duration, red_flag})  / canSubmitSymptomUpdate(id)
+ *   Halvian.logSymptomUpdate({patient_id, symptoms[], pain, duration, red_flag, [free_text, ai_summary, ai_source, red_flag_reason]})  / canSubmitSymptomUpdate(id)
  *   Halvian.fastTrack.{score(patient), featurize(patient), model}
  * Events: 'ready', 'override', 'aiOffline', 'patient:updated', 'symptomUpdate', 'settings', 'tab'
  */
@@ -139,6 +139,8 @@
       time: DEMO_NOW, symptoms: u.symptoms || [], pain: u.pain == null ? null : u.pain,
       duration: u.duration || '', confirmed_by: null, red_flag: !!u.red_flag
     };
+    // Optional fields from the own-words box (sorted by Claude, or by the labelled keyword fallback).
+    ['free_text', 'ai_summary', 'ai_source', 'red_flag_reason'].forEach(function (k) { if (u[k]) entry[k] = u[k]; });
     if (entry.red_flag) entry.nurse_paged = true;
     p.symptom_updates.push(entry);
     H.state.symptomUpdates.push({ patient_id: p.id, entry: entry });

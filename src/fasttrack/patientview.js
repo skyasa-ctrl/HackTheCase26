@@ -23,7 +23,11 @@
       plan_h: 'If you decide to leave: your plan', plan1: 'Where to go: your regular doctor or an urgent care clinic today. Call 911 or return here if you get worse.',
       plan2: 'Warning signs — come back or call 911 for: chest pain, trouble breathing, fainting, confusion, severe bleeding, face drooping or weakness on one side.',
       plan3: 'Follow-up: tell the desk your phone number so a nurse can check on you, and see a doctor within 24 hours.',
-      plan_ai: 'Drafted by AI and reviewed by a nurse.', plan_pending: 'Waiting for nurse review.',
+      plan_ai: 'Drafted by AI (Claude), then reviewed and approved by a nurse.', plan_tpl: 'Standard hospital advice, sent by a nurse.',
+      plan_pending: 'A nurse is reviewing a personal plan for you. Meanwhile, here is our standard advice:', plan_talked: 'A nurse came to talk with you in person.',
+      ow_h: 'Or describe it in your own words', ow_help: 'Type how you feel now, in any words or language. AI sorts it for the nurse. A nurse reviews it before anything changes.',
+      ow_ph: 'For example: my chest feels tight and I feel dizzy', ow_send: 'Send description', ow_wait: 'Sending…', ow_empty: 'Please type a few words first.',
+      ow_src_claude: 'Sorted by AI (Claude). A nurse confirms before it counts.', ow_src_rules: 'Sorted by keyword rules because AI is not connected. A nurse confirms before it counts.',
       s_chest: 'Chest pain or pressure', s_breath: 'Trouble breathing', s_faint: 'Fainting or nearly fainting', s_conf: 'New confusion',
       s_bleed: 'Severe bleeding', s_stroke: 'Stroke signs (face drooping, arm weakness, trouble speaking)', s_nausea: 'Nausea or vomiting', s_dizzy: 'Dizziness',
       s_fever: 'Fever or chills', s_pain: 'Pain getting worse', s_head: 'Headache', s_other: 'Something else', none: 'No patient selected.'
@@ -47,7 +51,11 @@
       plan_h: 'Si decide irse: su plan', plan1: 'A dónde ir: su médico de siempre o una clínica de atención urgente hoy. Llame al 911 o regrese si empeora.',
       plan2: 'Señales de alarma — regrese o llame al 911 si tiene: dolor de pecho, dificultad para respirar, desmayo, confusión, sangrado fuerte, cara caída o debilidad de un lado.',
       plan3: 'Seguimiento: dé su teléfono en el mostrador para que una enfermera lo llame, y vea a un médico en 24 horas.',
-      plan_ai: 'Redactado por IA y revisado por una enfermera.', plan_pending: 'Esperando revisión de la enfermera.',
+      plan_ai: 'Redactado por IA (Claude), luego revisado y aprobado por una enfermera.', plan_tpl: 'Consejo estándar del hospital, enviado por una enfermera.',
+      plan_pending: 'Una enfermera está revisando un plan personal para usted. Mientras tanto, este es nuestro consejo estándar:', plan_talked: 'Una enfermera vino a hablar con usted en persona.',
+      ow_h: 'O descríbalo con sus propias palabras', ow_help: 'Escriba cómo se siente ahora, con sus palabras o en su idioma. La IA lo organiza para la enfermera. Una enfermera lo revisa antes de cualquier cambio.',
+      ow_ph: 'Por ejemplo: siento el pecho apretado y estoy mareado', ow_send: 'Enviar descripción', ow_wait: 'Enviando…', ow_empty: 'Escriba algunas palabras primero.',
+      ow_src_claude: 'Organizado por IA (Claude). Una enfermera lo confirma antes de que cuente.', ow_src_rules: 'Organizado por reglas de palabras clave porque la IA no está conectada. Una enfermera lo confirma antes de que cuente.',
       s_chest: 'Dolor u opresión en el pecho', s_breath: 'Dificultad para respirar', s_faint: 'Desmayo o casi desmayo', s_conf: 'Confusión nueva',
       s_bleed: 'Sangrado fuerte', s_stroke: 'Señales de derrame (cara caída, debilidad del brazo, dificultad para hablar)', s_nausea: 'Náuseas o vómito', s_dizzy: 'Mareo',
       s_fever: 'Fiebre o escalofríos', s_pain: 'El dolor empeora', s_head: 'Dolor de cabeza', s_other: 'Otra cosa', none: 'Ningún paciente seleccionado.'
@@ -76,7 +84,12 @@
   }
 
   function mount(el) {
-    var lang = 'en', pid = '', msg = {}, leaveShown = {}, feedbackShown = {};
+    var lang = 'en', pid = '', msg = {}, feedbackShown = {}, owBusy = {}, owSrc = {};
+
+    function latestNotice(id) {
+      var list = (H.state.leaveNotices || []).filter(function (n) { return n.patient_id === id; });
+      return list.length ? list[list.length - 1] : null;
+    }
 
     function t(k, v) {
       var s = (T[lang][k] != null ? T[lang][k] : T.en[k]) || k;
@@ -121,12 +134,29 @@
         ['d1', 'd2', 'd3', 'd4'].map(function (d) { return '<option value="' + d + '">' + t(d) + '</option>'; }).join('') + '</select></div>' +
         '<button class="btn btn-primary" type="submit" style="font-size:1.2rem;min-height:48px">' + t('send') + '</button></fieldset></form></div>';
 
+      var aiOff = H.state.aiOffline;
+      h += '<div class="card"><h2>' + t('ow_h') + '</h2><p>' + t('ow_help') + '</p>' +
+        '<label for="pv-ow" class="sr-only">' + t('ow_h') + '</label>' +
+        '<textarea id="pv-ow" rows="3" style="width:100%;font-size:1.1rem;box-sizing:border-box" placeholder="' + t('ow_ph') + '"' + (gate.ok && !owBusy[p.id] ? '' : ' disabled') + '></textarea>' +
+        '<p><button class="btn btn-primary" type="button" id="pv-ow-send" style="font-size:1.1rem;min-height:48px"' + (gate.ok && !owBusy[p.id] ? '' : ' disabled') + '>' +
+        (owBusy[p.id] ? t('ow_wait') : t('ow_send')) + '</button></p>' +
+        (owSrc[p.id] ? '<p class="muted ai-source">' + t(owSrc[p.id] === 'claude' ? 'ow_src_claude' : 'ow_src_rules') + '</p>' : '') +
+        (aiOff ? '' : '<p class="muted ai-source">' + esc(H.ai ? H.ai.label() : '') + '</p>') + '</div>';
+
       h += '<div class="card row"><button class="btn" id="pv-conf" style="min-height:48px">' + t('conf') + '</button>' +
         '<button class="btn" id="pv-leave" style="min-height:48px">' + t('leave') + '</button></div>';
       if (feedbackShown[p.id]) h += '<p class="pill ok" role="status" style="font-size:1rem">' + t('conf_thanks') + '</p>';
-      if (leaveShown[p.id]) {
-        h += '<div class="card" role="status"><p class="pill info" style="font-size:1rem">' + t('leave_note') + '</p><h3>' + t('plan_h') + '</h3><p>' + t('plan1') + '</p><p>' + t('plan2') + '</p><p>' + t('plan3') + '</p>' +
-          '<p class="muted">' + t('plan_ai') + ' <em>(' + t('plan_pending') + ')</em></p></div>';
+      var nt = latestNotice(p.id);
+      if (nt) {
+        h += '<div class="card" role="status"><p class="pill info" style="font-size:1rem">' + t('leave_note') + '</p><h3>' + t('plan_h') + '</h3>';
+        if (nt.status === 'sent') {
+          h += '<p style="white-space:pre-line">' + esc(nt.final_text) + '</p><p class="muted ai-source">' + t(nt.source === 'claude' ? 'plan_ai' : 'plan_tpl') + '</p>';
+        } else {
+          if (nt.status === 'talked') h += '<p class="pill ok" style="font-size:1rem">' + t('plan_talked') + '</p>';
+          else h += '<p class="muted">' + t('plan_pending') + '</p>';
+          h += '<p>' + t('plan1') + '</p><p>' + t('plan2') + '</p><p>' + t('plan3') + '</p>';
+        }
+        h += '</div>';
       }
       return h;
     }
@@ -145,10 +175,34 @@
         H.state.feedback.push({ patient_id: pid, time: H.util.iso(H.util.now()), lang: lang, page: 'patientview', confusing: true });
         feedbackShown[pid] = true; render();
       } else if (e.target.id === 'pv-leave') {
+        var p0 = H.getPatient(pid), id0 = pid;
         H.state.leaveNotices = H.state.leaveNotices || [];
-        H.state.leaveNotices.push({ patient_id: pid, time: H.util.iso(H.util.now()), nurse_notified: true, plan_reviewed_by: null });
-        H.emit('patientview:leaving', { patient_id: pid });
-        leaveShown[pid] = true; render();
+        var notice = { patient_id: id0, time: H.util.iso(H.util.now()), nurse_notified: true, status: 'drafting', lang: lang,
+          draft: '', source: '', final_text: '', reviewed_by: null };
+        H.state.leaveNotices.push(notice);
+        H.emit('patientview:leaving', { patient_id: id0 });
+        render();
+        H.ai.leavePlan(p0, lang).then(function (r) {
+          notice.draft = r.text; notice.source = r.source; notice.status = 'pending_review';
+          H.emit('leave:updated', notice);
+          render();
+        });
+      } else if (e.target.id === 'pv-ow-send') {
+        var ta = el.querySelector('#pv-ow'), text = ta ? ta.value.trim() : '', id1 = pid, p1 = H.getPatient(pid), lang1 = lang;
+        if (!text) { msg[id1] = t('ow_empty'); render(); return; }
+        var g1 = H.canSubmitSymptomUpdate(id1);
+        if (!g1.ok) { msg[id1] = t('wait_more', { m: g1.minutesUntil }); render(); return; }
+        owBusy[id1] = true; render();
+        H.ai.triage(text, lang1, p1).then(function (res) {
+          var r = H.logSymptomUpdate({
+            patient_id: id1, symptoms: [H.ai.CATEGORY_LABELS[res.category] + ' (own words)'], pain: null, duration: '',
+            red_flag: res.red_flag, free_text: text, ai_summary: res.nurse_summary, ai_source: res.source, red_flag_reason: res.red_flag_reason
+          });
+          owBusy[id1] = false; owSrc[id1] = res.source;
+          if (r && r.error) msg[id1] = t('wait_more', { m: r.minutesUntil });
+          else msg[id1] = res.red_flag ? t('red') : esc(res.patient_reply);
+          render();
+        });
       }
     });
     el.addEventListener('submit', function (e) {
@@ -167,6 +221,8 @@
 
     H.on('rooms:updated', function () { if (pid) render(); });
     H.on('aiOffline', function () { if (pid) render(); });
+    H.on('ai:status', function () { if (pid) render(); });
+    H.on('leave:updated', function (n) { if (pid && n && n.patient_id === pid) render(); });
     H.on('patient:updated', function (d) { if (d && d.source !== 'symptomUpdate' && pid && d.patient && d.patient.id === pid) render(); });
     render();
   }

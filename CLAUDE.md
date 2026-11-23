@@ -18,10 +18,11 @@ Three tabs, one app:
 5. **Insurance is never a model input.** It is used only in the fairness panel, to compare waits, scores, LWBS and override rates across groups.
 6. **No redirecting patients to other hospitals** once they arrive at the ED (EMTALA).
 7. **Wait-time estimates** are shown as ranges and never shown to acuity 1–2 patients.
-8. **No secrets in the client.** This is a static site on GitHub Pages, so never commit API keys. Any "model" must run in the browser (for example, rules or coefficients from a model trained offline and exported to JSON).
+8. **No secrets in the client.** This is a static site on GitHub Pages, so never commit API keys. Scoring and fast-track models run in the browser (rules, and coefficients from a model trained offline and exported to JSON). The **one exception** is `src/shared/ai.js`, which calls Claude for the two text tasks (sorting own-words symptom descriptions, drafting leave-with-a-plan messages). It uses `window.claude` when run as a Claude artifact, or a key the presenter pastes in at runtime, held in memory only. It must always fall back to the labelled keyword rules, and never label rules output as AI.
+9. **Patient-facing AI text needs a nurse first.** An AI-drafted message reaches a patient only after a nurse approves it. The one exception is a generic acknowledgment ("a nurse will review this"), which contains no clinical advice.
 
 ## Tech conventions
-- Plain HTML + CSS + vanilla JS. **Classic `<script src>` tags only: no ES modules, no `fetch()`, no CDN.** Teammates open `index.html` by double-clicking (file://), where module imports and JSON fetches fail. No build step, no framework, works offline.
+- Plain HTML + CSS + vanilla JS. **Classic `<script src>` tags only: no ES modules, no `fetch()` of local files, no CDN.** (The only network call is `ai.js` calling the Claude API.) Teammates open `index.html` by double-clicking (file://), where module imports and JSON fetches fail. No build step, no framework, works offline.
 - Everything hangs off one global namespace, `window.Halvian` (state, event bus, helpers, `registerModule`; see the header comment of `src/shared/core.js`). Each tab is a module: `Halvian.registerModule('ranking' | 'fasttrack' | 'capacity' | 'patientview', {mount(el)})`.
 - Data ships as JS files that assign globals (`Halvian.data.patients`, `.history`, `.rooms`, `.fasttrackModel`), with matching `.json` copies for reference. Regenerate with `python scripts/generate_data.py && python scripts/train_fasttrack.py`. Never hand-edit generated files.
 - `Halvian.state.aiOffline` true means fall back to ESI-then-arrival ordering and hide AI suggestions (`Halvian.util.esiArrivalCompare`).

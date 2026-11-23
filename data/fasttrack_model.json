@@ -1,6 +1,6 @@
 {
  "name": "Halvian fast-track eligibility (logistic regression)",
- "note": "Synthetic data only. Insurance is NOT a feature. Trained offline; runs in the browser.",
+ "note": "Synthetic data only. Insurance is NOT a feature. Trained offline; runs in the browser. Fairness results here are from synthetic data and must be re-tested on real data in silent mode.",
  "features": [
   "esi_2",
   "esi_3",
@@ -143,6 +143,8 @@
  "metrics": {
   "accuracy_at_0.5": 0.9378,
   "auc": 0.9803,
+  "auc_esi_3_5": 0.973,
+  "auc_note": "Synthetic labels are cleaner than real triage data, so these AUCs overstate real-world accuracy. Published real-world benchmark: 0.87 (Kaiser fast-track model). Go-live bar in silent mode: AUC >= 0.85 on Halvian's own data and bounce-back < 5%.",
   "bounce_back_rate_at_threshold": 0.0331,
   "bounce_back_rate_validation": 0.0444,
   "selected_in_test": 151,

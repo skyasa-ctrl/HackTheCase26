@@ -146,6 +146,10 @@ def main():
     bb_te, k_te = bounce_back(st, yt, thr)
     bb_va, k_va = bounce_back(sv, yv, thr)
     acc = sum((s >= 0.5) == bool(t_) for s, t_ in zip(st, yt)) / len(st)
+    # Stricter check: AUC only among ESI 3-5 patients, the ones fast-track actually decides on.
+    # (ESI 1-2 are never eligible, so including them makes AUC look better than it really is.)
+    te_elig = [i for i in te if hist[i]["esi"] >= 3]
+    auc_elig = auc([score[i] for i in te_elig], [y[i] for i in te_elig])
 
     fairness = {}
     for g in ["commercial", "medicare", "medicaid", "uninsured", "other"]:
@@ -162,7 +166,8 @@ def main():
 
     model = {
         "name": "Halvian fast-track eligibility (logistic regression)",
-        "note": "Synthetic data only. Insurance is NOT a feature. Trained offline; runs in the browser.",
+        "note": "Synthetic data only. Insurance is NOT a feature. Trained offline; runs in the browser. "
+                "Fairness results here are from synthetic data and must be re-tested on real data in silent mode.",
         "features": FEATURES,
         "labels": LABELS,
         "weights": [round(v, 5) for v in w],
@@ -175,6 +180,10 @@ def main():
         "metrics": {
             "accuracy_at_0.5": round(acc, 4),
             "auc": round(auc(st, yt), 4),
+            "auc_esi_3_5": round(auc_elig, 4),
+            "auc_note": "Synthetic labels are cleaner than real triage data, so these AUCs overstate real-world accuracy. "
+                        "Published real-world benchmark: 0.87 (Kaiser fast-track model). Go-live bar in silent mode: "
+                        "AUC >= 0.85 on Halvian's own data and bounce-back < 5%.",
             "bounce_back_rate_at_threshold": round(bb_te, 4),
             "bounce_back_rate_validation": round(bb_va, 4),
             "selected_in_test": k_te,

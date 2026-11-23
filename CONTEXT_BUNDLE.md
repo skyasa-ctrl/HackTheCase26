@@ -90,10 +90,12 @@ A single file to paste into Claude (or any AI tool) so it understands the case, 
 
 **Final numbers (Nov 22, used in all docs and slides):**
 - **Budget:** ≈$700K over 18 months (pilot $377K, scale $323K, incl. 10% contingency). Year-2 run cost ≈$140K/yr.
-- **Value:** conservative ≈$1.03M/yr (1,275 visits × $750 after a 50% revenue haircut, plus 1,095 nurse-hours × $65).
-- **ROI:** 121% during build, ≈640% in year 2. Break-even at LWBS 3.6%.
+- **Value:** conservative ≈$454K/yr on a **contribution-margin** basis: 1,275 recovered visits × $300 ($1,500 × 50% payer haircut × 40% margin), plus 1,095 nurse-hours × $65. Net revenue recovered (before cost of care) ≈$956K/yr, shown for reference only.
+- **ROI:** ≈224% in Year 2. During the 18-month build, value roughly equals cost. **Headline is break-even:** an LWBS drop of 0.55 points (4.0% → 3.45%) covers the Year-2 run cost. The tool costs less than one added 24/7 triage nurse from Month 11.
+- **Equity goals:** same-acuity door-to-provider gap halved for uninsured and Medicaid patients (overall uninsured gap 16 → ≤8 min); LWBS uninsured 5.8% → ≤3.5%, Medicaid 4.6% → ≤3.3%.
 - **Traditional alternative:** one 24/7 triage nurse = $569K/yr ($854K on overtime).
-- **Fast-track model:** cutoff 86%, bounce-back 3.3% (target < 5%), AUC 0.98 on synthetic data.
+- **Fast-track model:** cutoff 86%, bounce-back 3.3% (target < 5%). AUC 0.98 overall / 0.97 for ESI 3–5, **on synthetic data only**; real-world benchmark 0.87 (Kaiser); go-live bar AUC ≥ 0.85 in silent mode.
+- **Demo AI:** Claude sorts patients' own-words symptom descriptions (category, red flag, nurse summary) and drafts "leave with a plan" messages that a nurse approves. If AI isn't connected, a clearly labelled keyword fallback runs.
 - **Slides:** https://claude.ai/artifact/MnpDwVSMsAaBWMczpnAJiW · **Script:** video/SCRIPT.md
 
 ## 5. Team

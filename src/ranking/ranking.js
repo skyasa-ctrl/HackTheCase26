@@ -160,6 +160,7 @@
     el.innerHTML =
       '<div class="rk-wrap">' +
       '<div id="rk-alerts" role="alert" aria-live="assertive"></div>' +
+      '<div id="rk-leave" aria-live="polite"></div>' +
       '<div id="rk-offline"></div>' +
       '<div class="card"><details id="rk-weights-box"><summary class="rk-summary">Scoring weights (nurse-set)</summary>' +
       '<p class="muted" style="margin-top:.5rem">Points only reorder patients <strong>within</strong> the same ESI level. Adjust a weight and the queue re-ranks immediately. ' +
@@ -193,12 +194,39 @@
         if (u.red_flag && !u.confirmed_by && !u.dismissed_by) {
           html += '<div class="rk-alert">Nurse paged: ' + esc(p.id) + ' (ESI ' + esc(p.esi) + ', ' + esc(p.chief_complaint) + ') reported red-flag symptoms' +
             (u.symptoms && u.symptoms.length ? ': ' + esc(u.symptoms.join(', ')) : '') +
+            (u.ai_summary ? '. ' + (u.ai_source === 'claude' ? 'AI summary' : 'Patient wrote') + ': ' + esc(u.ai_summary.replace(/^Patient wrote: /, '')) : '') +
+            (u.red_flag_reason ? ' (' + esc(u.red_flag_reason) + ')' : '') +
             '. Assess now; red flags bypass scoring. ' +
             '<button type="button" class="btn btn-sm" data-act="ack" data-id="' + esc(p.id) + '" data-i="' + (p.symptom_updates.indexOf(u)) + '">I have assessed this patient</button></div>';
         }
       });
     });
     root.querySelector('#rk-alerts').innerHTML = html;
+  }
+
+  /* Patients who tapped "I'm thinking of leaving": AI drafts a plan, a nurse must approve it before the patient sees it. */
+  function renderLeave() {
+    var list = (H.state.leaveNotices || []), html = '';
+    list.forEach(function (n, i) {
+      if (n.status === 'sent' || n.status === 'talked') return;
+      var p = H.getPatient(n.patient_id);
+      if (!p) return;
+      html += '<div class="card" style="border-left:4px solid var(--warn-line);border-radius:0"><h2 style="margin-top:0">Thinking of leaving: ' + esc(p.id) +
+        ' <span class="muted" style="font-size:1rem">(ESI ' + esc(p.esi) + ', ' + esc(p.chief_complaint) + ', waiting ' + Math.round(waitMin(p)) + ' min)</span></h2>' +
+        '<p>Go and talk with the patient if you can. Their "leave with a plan" message is below; the patient sees it only after you approve it.</p>';
+      if (n.status === 'drafting') {
+        html += '<p class="muted">Drafting the message…</p>';
+      } else {
+        html += '<p class="ai-source"><strong>' + (n.source === 'claude' ? 'Draft written by AI (Claude) in ' + (n.lang === 'es' ? 'Spanish' : 'English') + '. Edit as needed.' :
+          'Standard template (AI not connected). Edit as needed.') + '</strong></p>' +
+          '<label for="rk-leave-' + i + '" class="sr-only">Message to patient</label>' +
+          '<textarea id="rk-leave-' + i + '" rows="5" style="width:100%;box-sizing:border-box">' + esc(n.draft) + '</textarea>' +
+          '<p class="row"><button type="button" class="btn btn-sm btn-primary" data-act="leave-send" data-i="' + i + '">Approve and send to patient</button> ' +
+          '<button type="button" class="btn btn-sm" data-act="leave-talked" data-i="' + i + '">I talked with the patient in person</button></p>';
+      }
+      html += '</div>';
+    });
+    root.querySelector('#rk-leave').innerHTML = html;
   }
 
   function badges(r) {
@@ -217,6 +245,8 @@
       h += '<div class="rk-pending"><span class="pill warn">Symptom update pending — nurse review</span> ' +
         (u.symptoms && u.symptoms.length ? esc(u.symptoms.join(', ')) : 'no new symptoms') +
         (u.pain != null ? ', pain ' + esc(u.pain) + '/10' : '') + (u.duration ? ', ' + esc(u.duration) : '') +
+        (u.ai_summary ? '<br><span class="ai-source"><strong>' + (u.ai_source === 'claude' ? 'AI summary (Claude)' : 'Keyword fallback, not AI') + ':</strong> ' + esc(u.ai_summary) + '</span>' +
+          (u.free_text ? '<br><span class="muted ai-source">Patient\'s words: "' + esc(u.free_text) + '"</span>' : '') + '<br>' : '') +
         ' <span class="muted">(no points until confirmed)</span> ' +
         '<button type="button" class="btn btn-sm btn-primary" data-act="confirm" data-id="' + esc(p.id) + '" data-i="' + x.i + '">Confirm</button> ' +
         '<button type="button" class="btn btn-sm" data-act="dismiss" data-id="' + esc(p.id) + '" data-i="' + x.i + '">Dismiss</button></div>';
@@ -314,6 +344,10 @@
     var byEsi = {};
     q.ranked.forEach(function (r) { (byEsi[r.p.esi] = byEsi[r.p.esi] || []).push(r.s.total); });
     Object.keys(byEsi).forEach(function (k) { esiMeans[k] = mean(byEsi[k]); });
+    // Same-acuity baseline: each past visit's door-to-provider time minus the average for its ESI level.
+    var esiD2p = {};
+    hist.forEach(function (x) { var v = x.outcome && x.outcome.door_to_provider_min; if (v != null) (esiD2p[x.esi] = esiD2p[x.esi] || []).push(v); });
+    Object.keys(esiD2p).forEach(function (k) { esiD2p[k] = mean(esiD2p[k]); });
     var stats = {};
     GROUPS.forEach(function (g) {
       var rows = q.ranked.filter(function (r) { return r.p.insurance === g; });
@@ -326,21 +360,24 @@
         diff: mean(rows.map(function (r) { return r.s.total - esiMeans[r.p.esi]; })),
         score: mean(rows.map(function (r) { return r.s.total; })),
         ov: H.state.overrides.filter(function (o) { var pt = H.getPatient(o.patient_id); return pt && pt.insurance === g; }).length,
-        hn: hr.length, d2p: median(d2p), lwbs: hr.length ? 100 * lw / hr.length : null
+        hn: hr.length, d2p: median(d2p), lwbs: hr.length ? 100 * lw / hr.length : null,
+        sameEsi: mean(hr.filter(function (x) { return x.outcome && x.outcome.door_to_provider_min != null; })
+          .map(function (x) { return x.outcome.door_to_provider_min - esiD2p[x.esi]; }))
       };
     });
     var h = '<div class="table-wrap"><table class="table"><thead><tr><th>Insurance group</th><th class="num">Waiting now</th><th class="num">Median current wait (min)</th>' +
       '<th class="num">Mean AI score</th><th class="num">Score vs ESI average</th><th class="num">Overrides</th>' +
-      '<th class="num">Hist. median door-to-provider (min)</th><th class="num">Hist. LWBS %</th></tr></thead><tbody>';
+      '<th class="num">Hist. median door-to-provider (min)</th><th class="num">Hist. wait vs same-ESI average (min)</th><th class="num">Hist. LWBS %</th></tr></thead><tbody>';
     GROUPS.forEach(function (g) {
-      var s = stats[g], hl = g === 'uninsured' || g === 'commercial';
+      var s = stats[g], hl = g === 'uninsured' || g === 'medicaid' || g === 'commercial';
       h += '<tr' + (hl ? ' style="background:#f3f8fc"' : '') + '><th scope="row" style="text-align:left;position:static;background:none;text-transform:capitalize">' + esc(g) + '</th>' +
         '<td class="num">' + s.n + '</td><td class="num">' + fmt(s.wait) + '</td>' +
         '<td class="num">' + (offline ? '—' : fmt(s.score, 1)) + '</td><td class="num">' + (offline || s.diff == null ? '—' : (s.diff > 0 ? '+' : '') + s.diff.toFixed(1)) + '</td>' +
-        '<td class="num">' + s.ov + '</td><td class="num">' + fmt(s.d2p) + '</td><td class="num">' + (s.lwbs == null ? '—' : s.lwbs.toFixed(1) + '%') + '</td></tr>';
+        '<td class="num">' + s.ov + '</td><td class="num">' + fmt(s.d2p) + '</td><td class="num">' + (s.sameEsi == null ? '—' : (s.sameEsi > 0 ? '+' : '') + s.sameEsi.toFixed(1)) + '</td>' +
+        '<td class="num">' + (s.lwbs == null ? '—' : s.lwbs.toFixed(1) + '%') + '</td></tr>';
     });
     h += '</tbody></table></div>';
-    var u = stats.uninsured, c = stats.commercial, notes = [];
+    var u = stats.uninsured, c = stats.commercial, md = stats.medicaid, notes = [];
     if (u.wait != null && c.wait != null) {
       notes.push('Current median wait: uninsured ' + fmt(u.wait) + ' min vs commercial ' + fmt(c.wait) + ' min (gap ' + fmt(u.wait - c.wait) + ' min).');
     }
@@ -350,10 +387,15 @@
     if (u.lwbs != null && c.lwbs != null) {
       notes.push('Historical LWBS: uninsured ' + u.lwbs.toFixed(1) + '% vs commercial ' + c.lwbs.toFixed(1) + '% (gap ' + (u.lwbs - c.lwbs).toFixed(1) + ' points).');
     }
+    if (u.sameEsi != null && md.sameEsi != null && c.sameEsi != null) {
+      notes.push('Same-acuity gap (our equity measure): uninsured ' + (u.sameEsi - c.sameEsi).toFixed(1) + ' min and Medicaid ' + (md.sameEsi - c.sameEsi).toFixed(1) +
+        ' min longer than commercial patients at the same ESI level.');
+    }
+    if (md.lwbs != null && c.lwbs != null) notes.push('Historical LWBS: Medicaid ' + md.lwbs.toFixed(1) + '% vs commercial ' + c.lwbs.toFixed(1) + '%.');
     if (!hist.length) notes.push('Historical baseline is not loaded.');
     var flagged = (u.d2p != null && c.d2p != null && u.d2p - c.d2p >= 5) || (u.lwbs != null && c.lwbs != null && u.lwbs - c.lwbs >= 1) ||
       (u.wait != null && c.wait != null && u.wait - c.wait >= 10);
-    h += '<div class="rk-gap"><strong>Uninsured vs commercial' + (flagged ? ': gap worth reviewing' : '') + '.</strong> ' + esc(notes.join(' ')) + '</div>';
+    h += '<div class="rk-gap"><strong>Uninsured and Medicaid vs commercial' + (flagged ? ': gap worth reviewing' : '') + '.</strong> ' + esc(notes.join(' ')) + '</div>';
     h += '<p class="muted">Insurance is not used in scoring — shown for fairness monitoring only. Small groups give noisy current-queue numbers; the historical baseline (' + hist.length + ' past visits) is steadier. Score vs ESI average compares each group with other patients at the same ESI level.</p>';
     root.querySelector('#rk-fair').innerHTML = h;
   }
@@ -361,6 +403,7 @@
   function refresh() {
     if (!root) return;
     renderAlerts();
+    renderLeave();
     renderOffline();
     var q = renderList();
     renderLog();
@@ -419,6 +462,22 @@
         nurse_decision: 'Dismissed symptom update', reason: 'Nurse reviewed and dismissed the update' });
     } else if (act === 'ack') {
       setUpdate(id, i, { dismissed_by: H.state.settings.nurse, red_flag_assessed: true });
+    } else if (act === 'leave-send' || act === 'leave-talked') {
+      var n = (H.state.leaveNotices || [])[i];
+      if (!n) return;
+      var nurseName = H.state.settings.nurse;
+      if (act === 'leave-send') {
+        var ta = root.querySelector('#rk-leave-' + i), txt = ta ? ta.value.trim() : n.draft;
+        if (!txt) { if (ta) ta.focus(); return; }
+        n.final_text = txt; n.status = 'sent'; n.reviewed_by = nurseName;
+        if (txt !== String(n.draft).trim()) {
+          H.logOverride({ module: 'ranking', patient_id: n.patient_id, ai_suggestion: n.source === 'claude' ? 'AI-drafted leave plan' : 'Standard leave template',
+            nurse_decision: 'Edited the message before sending', reason: 'Nurse review of patient message' });
+        }
+      } else {
+        n.status = 'talked'; n.reviewed_by = nurseName;
+      }
+      H.emit('leave:updated', n);
     }
   }
 
@@ -459,7 +518,7 @@
         buildWeights();
         refresh();
       });
-      ['patient:updated', 'symptomUpdate', 'override', 'settings', 'aiOffline'].forEach(function (evt) { H.on(evt, function () { refresh(); }); });
+      ['patient:updated', 'symptomUpdate', 'override', 'settings', 'aiOffline', 'patientview:leaving', 'leave:updated'].forEach(function (evt) { H.on(evt, function () { refresh(); }); });
       refresh();
     }
   });

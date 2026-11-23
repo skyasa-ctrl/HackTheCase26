@@ -93,20 +93,24 @@
       if (!model) return '<div class="card"><h2>Model card</h2><p>Model not loaded.</p></div>';
       var m = model.metrics, fair = model.fairness, groups = Object.keys(fair);
       var rows = groups.map(function (g) {
-        var top = g === 'uninsured';
-        return '<tr' + (top ? ' style="background:var(--brand-tint)"' : '') + '><td>' + esc(g) + (top ? ' <span class="pill info">highest</span>' : '') + '</td><td class="num">' + fair[g].n +
+        var top = g === 'uninsured' || g === 'medicaid';
+        return '<tr' + (top ? ' style="background:var(--brand-tint)"' : '') + '><td>' + esc(g) + '</td><td class="num">' + fair[g].n +
           '</td><td class="num">' + f1(fair[g].selection_rate) + '</td><td class="num">' + f1(fair[g].bounce_back_rate) + '</td></tr>';
       }).join('');
       return '<div class="card"><h2>Model card</h2><div class="table-wrap"><table class="table"><tbody>' +
         '<tr><td>Threshold</td><td class="num">' + pct(H.state.settings.fasttrackThreshold) + '% (trained: ' + pct(model.threshold) + '%)</td></tr>' +
         '<tr><td>Bounce-back rate at threshold</td><td class="num">' + f1(m.bounce_back_rate_at_threshold) + ' (target under ' + pct(m.bounce_back_target) + '%)</td></tr>' +
         '<tr><td>Accuracy (at 0.5)</td><td class="num">' + f1(m['accuracy_at_0.5']) + '</td></tr>' +
-        '<tr><td>AUC</td><td class="num">' + m.auc.toFixed(3) + '</td></tr>' +
+        '<tr><td>AUC, all patients (synthetic data)</td><td class="num">' + m.auc.toFixed(3) + '</td></tr>' +
+        (m.auc_esi_3_5 != null ? '<tr><td>AUC, ESI 3–5 only (stricter; synthetic data)</td><td class="num">' + m.auc_esi_3_5.toFixed(3) + '</td></tr>' : '') +
+        '<tr><td>Real-world benchmark (published)</td><td class="num">0.87</td></tr>' +
         '<tr><td>Training patients (n_train)</td><td class="num">' + m.n_train + '</td></tr></tbody></table></div>' +
+        '<p class="banner-warning" style="margin-top:.6rem"><strong>Read with care:</strong> synthetic labels are cleaner than real triage data, so these numbers overstate real-world accuracy. ' +
+        'Go-live bar in silent mode: AUC of at least 0.85 on Halvian\'s own data and bounce-back under 5%.</p>' +
         '<h3 style="margin-top:1rem">Fairness by insurance group</h3><p class="muted"><strong>Insurance is not a model input.</strong> It is used only here, to check the model is fair.</p>' +
         '<div class="table-wrap"><table class="table"><thead><tr><th>Group</th><th class="num">n</th><th class="num">Selection rate</th><th class="num">Bounce-back</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
-        '<p>Uninsured patients have the highest fast-track selection rate (' + f1(fair.uninsured.selection_rate) + '), with bounce-back (' + f1(fair.uninsured.bounce_back_rate) +
-        ') no higher than other groups, so fast-track helps narrow the wait gap for uninsured patients.</p></div>';
+        '<p>In this synthetic test, uninsured (' + f1(fair.uninsured.selection_rate) + ') and Medicaid (' + f1(fair.medicaid.selection_rate) + ') patients are selected for fast-track at least as often as commercial patients (' + f1(fair.commercial.selection_rate) + '), with similar bounce-back. ' +
+        'This is a hypothesis to confirm on real Halvian data in silent mode, not proof.</p></div>';
     }
 
     function thresholdHtml() {

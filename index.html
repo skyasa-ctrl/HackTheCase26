@@ -12,6 +12,16 @@
     <h1>Halvian ED Triage Assistant</h1>
     <span class="clock" id="demo-clock"></span>
     <span class="spacer"></span>
+    <details class="ai-connect" id="ai-connect">
+      <summary id="ai-status">AI: not connected (rules fallback)</summary>
+      <div class="ai-connect-body" id="ai-key-box">
+        <label for="ai-key">Anthropic API key (presenter only)</label>
+        <input type="password" id="ai-key" autocomplete="off" placeholder="sk-ant-...">
+        <div class="row"><button type="button" class="btn btn-sm btn-primary" id="ai-key-use">Connect Claude</button>
+        <button type="button" class="btn btn-sm" id="ai-key-clear">Disconnect</button></div>
+        <p class="muted">Kept in this page's memory only. Never saved or committed. Without a key, the demo uses a clearly labelled keyword fallback, not AI. In production, Claude runs inside Halvian's own cloud under a BAA.</p>
+      </div>
+    </details>
     <label class="switch" for="ai-offline-toggle">
       <input type="checkbox" id="ai-offline-toggle" role="switch">
       <span>AI offline</span>
@@ -43,6 +53,7 @@
   <script src="data/rooms.js"></script>
   <script src="data/fasttrack_model.js"></script>
   <script src="src/shared/core.js"></script>
+  <script src="src/shared/ai.js"></script>
   <script src="src/ranking/ranking.js"></script>
   <script src="src/fasttrack/fasttrack.js"></script>
   <script src="src/fasttrack/patientview.js"></script>

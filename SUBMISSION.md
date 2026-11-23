@@ -8,16 +8,16 @@
 
 ---
 
-## Video outline (target ~7:30, sections in required order)
+## Video outline (target 7:15, sections in required order)
 | # | Section | Time | Presenter | Source |
 |---|---|---|---|---|
-| 0 | Hook: one patient's story + the 55-min / 4% / 64-min numbers | 0:45 | Arabella | [video/SCRIPT.md](video/SCRIPT.md) |
+| 0 | Hook: the 55-min / 4% / uninsured-and-Medicaid numbers | 0:20 | Arabella | [video/SCRIPT.md](video/SCRIPT.md) |
 | 1 | AI Tool Architecture | 1:30 | Priya | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | 2 | Roadmap & Milestones | 1:15 | Arabella | [ROADMAP.md](ROADMAP.md) |
 | 3 | Budget & ROI | 1:15 | Sophie | [docs/BUDGET_ROI.md](docs/BUDGET_ROI.md) |
-| 4 | Risk Assessment & Mitigation | 1:00 | Everyone | [docs/RISK_SECURITY.md](docs/RISK_SECURITY.md) |
-| 5 | Live demo | 1:30 | Each person shows their tab | `index.html` |
-| 6 | Close: ask + Month-18 equity goal | 0:15 | Arabella | [video/SCRIPT.md](video/SCRIPT.md) |
+| 4 | Risk Assessment & Mitigation | 1:15 | Everyone | [docs/RISK_SECURITY.md](docs/RISK_SECURITY.md) |
+| 5 | Live demo (one driver, others voice their part) | 1:30 | Arabella drives | `index.html` |
+| 6 | Close: ask + Month-18 equity goal | 0:10 | Arabella | [video/SCRIPT.md](video/SCRIPT.md) |
 
 ## Rubric tracker (37 pts)
 | Section | Pts | Owner | Status |
@@ -47,6 +47,10 @@
 - [x] Rooms-open panel feeding wait-time ranges (Priya)
 - [x] **Fairness panel** by insurance group (Arabella)
 - [x] One app, polished, no broken buttons
+- [x] **Real AI (Claude):** own-words symptom box → category, red flag, nurse summary (keyword safety net alongside)
+- [x] **Real AI (Claude):** "leave with a plan" draft in the patient's language → nurse edits and approves before the patient sees it
+- [x] Honest labels: synthetic-data caveat on model accuracy; "keyword rules, not AI" whenever Claude isn't connected
+- [x] Fairness panel includes Medicaid and the same-acuity gap
 
 ## Timeline
 | Date | Target |
@@ -56,7 +60,10 @@
 | Nov 24 | Rehearse, record, edit, **upload before 11:59 pm** (aim for 9 pm) |
 
 ## Final checks before upload
-- [ ] Video is 5–8 min
+- [ ] Video is 5–8 min (target 7:15)
+- [ ] Header showed "AI: Claude connected" during the demo
+- [ ] Slides 6, 10, 11 and 15 match the updated docs: Medicaid goals, same-acuity gap, margin-based value ($454K/yr), break-even 0.55 pts, Year-2 ROI ≈224%
+- [ ] Teammates' last names filled in on slides 1 and 15
 - [ ] Sections are in the required order
 - [ ] No real patient data appears anywhere
 - [ ] File name matches the required format
