@@ -190,7 +190,7 @@
   };
 
   /* ---------- module registry + tabs ---------- */
-  var TAB_MODULE = { queue: 'ranking', fasttrack: 'fasttrack', capacity: 'capacity', patient: 'patientview' };
+  var TAB_MODULE = { queue: 'ranking', fasttrack: 'fasttrack', capacity: 'capacity', results: 'results', patient: 'patientview' };
   var modules = H.modules = H.modules || {}, mounted = {}, domReady = false;
 
   function containerFor(name) { return document.getElementById('mod-' + name); }

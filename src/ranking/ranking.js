@@ -12,18 +12,34 @@
   var RECHECK_AFTER = 60;                                     // minutes since last re-check before "overdue"
   var GROUPS = ['commercial', 'medicare', 'medicaid', 'uninsured', 'other'];
   var COMPONENTS = [
-    { key: 'wait', label: 'Wait over target', def: 1, max: 3, step: 0.25, unit: 'pts per 10 min over the ESI target' },
-    { key: 'starve', label: 'Anti-starvation', def: 5, max: 15, step: 1, unit: 'pts once wait exceeds the ESI-level average' },
-    { key: 'vitals', label: 'Abnormal vitals', def: 4, max: 10, step: 0.5, unit: 'pts per abnormal vital sign' },
-    { key: 'recheck', label: 'Overdue re-check', def: 1, max: 4, step: 0.25, unit: 'pts per 15 min past ' + RECHECK_AFTER + ' min since last re-check' },
-    { key: 'concern', label: 'Nurse concern', def: 10, max: 30, step: 1, unit: 'pts when the nurse flag is set' },
-    { key: 'symptom', label: 'Confirmed symptom update', def: 6, max: 20, step: 1, unit: 'pts for a nurse-confirmed, non-pain update' },
-    { key: 'painCap', label: 'Pain-only cap', def: 3, max: 10, step: 0.5, unit: 'maximum pts when an update is pain-only' }
+    { key: 'wait', label: 'Waiting past target', desc: 'Points for every 10 min past the acuity’s target wait.', def: 1, max: 3, step: 0.25, unit: 'pts per 10 min over the ESI target' },
+    { key: 'starve', label: 'Waited longer than similar patients', desc: 'One-time boost if waiting longer than others at the same acuity.', def: 5, max: 15, step: 1, unit: 'pts once wait exceeds the ESI-level average' },
+    { key: 'vitals', label: 'Abnormal vital signs', desc: 'Points for each vital sign outside the normal range.', def: 4, max: 10, step: 0.5, unit: 'pts per abnormal vital sign' },
+    { key: 'recheck', label: 'Overdue re-check', desc: 'Points for every 15 min after 60 min without a re-check.', def: 1, max: 4, step: 0.25, unit: 'pts per 15 min past ' + RECHECK_AFTER + ' min since last re-check' },
+    { key: 'concern', label: 'Nurse concern', desc: 'Points when a nurse flags ‘I’m worried about this patient.’', def: 10, max: 30, step: 1, unit: 'pts when the nurse flag is set' },
+    { key: 'symptom', label: 'Confirmed symptom update', desc: 'Points when a nurse confirms a patient’s new symptoms.', def: 6, max: 20, step: 1, unit: 'pts for a nurse-confirmed, non-pain update' },
+    { key: 'painCap', label: 'Pain-only limit', desc: 'Most points a pain-only update can add.', def: 3, max: 10, step: 0.5, unit: 'maximum pts when an update is pain-only' }
   ];
+  var TIPS = {
+    wait: "Target waits: ESI 2: 10 min, ESI 3: 30, ESI 4: 60, ESI 5: 120. Example: ESI 4 waiting 90 min = 30 min over = 3 points at the default.",
+    starve: "Applies when someone has waited longer than the current average for patients at the same acuity, so nobody keeps getting passed over.",
+    vitals: "Outside normal at the last check: heart rate under 50 or over 100, systolic BP under 100 or over 180, breathing rate under 10 or over 22, SpO2 under 94%, temperature 38.0 °C or higher. Example: HR 112 and SpO2 92% = 2 abnormal = 8 points at the default.",
+    recheck: "Example: last re-checked 90 min ago = 30 min overdue = 2 points at the default.",
+    concern: "Any nurse can set the flag. Your clinical gut feeling counts.",
+    symptom: "The patient reports new symptoms through the SMS link and a nurse confirms them at the bedside. Unconfirmed updates add nothing.",
+    painCap: "Pain matters, but pain alone shouldn’t jump the queue; reassess the patient instead."
+  };
+  function pts(v) { return v + (v === 1 ? ' pt' : ' pts'); }
+  var FMT = {
+    wait: function (v) { return pts(v) + ' / 10 min'; }, starve: function (v) { return '+' + pts(v); },
+    vitals: function (v) { return pts(v) + ' each'; }, recheck: function (v) { return pts(v) + ' / 15 min'; },
+    concern: function (v) { return '+' + pts(v); }, symptom: function (v) { return '+' + pts(v); },
+    painCap: function (v) { return 'max ' + pts(v); }
+  };
   var BAR_SCALE = 25;                                         // points that fill a bar
 
-  var weights = {};
-  COMPONENTS.forEach(function (c) { weights[c.key] = c.def; });
+  var weights = {}, savedWeights = {}, lastWeightChange = null;
+  COMPONENTS.forEach(function (c) { weights[c.key] = c.def; savedWeights[c.key] = c.def; });
 
   /* nurse overrides (session only): pin flag and a score bias used to place a row within its ESI group */
   var pins = {}, bias = {};
@@ -134,25 +150,40 @@
     var st = document.createElement('style');
     st.id = STYLE_ID;
     st.textContent =
-      '.rk-alert{background:#fde4e4;border:2px solid var(--danger);color:#5c0f13;border-radius:var(--radius);padding:.7rem .9rem;margin-bottom:.6rem;font-weight:600}' +
-      '.rk-row{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);margin:.5rem 0;padding:.6rem .8rem}' +
+      '.rk-row{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);margin:.4rem 0;padding:.6rem .8rem;scroll-margin-top:9rem}' +
+      '.rk-row.rk-flash{animation:rkflash 2.8s ease-out;outline:3px solid var(--brand);outline-offset:1px}' +
+      '@keyframes rkflash{0%,60%{background:#cfe6f5}100%{background:var(--surface)}}' +
+      '.rk-sumbar{display:flex;flex-wrap:wrap;gap:.5rem;margin:0 0 1rem;padding:0;list-style:none}' +
+      '.rk-sumbar li{flex:1 1 9rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.45rem .8rem;box-shadow:var(--shadow)}' +
+      '.rk-sumbar b{display:block;font-size:1.35rem;line-height:1.2;font-variant-numeric:tabular-nums}' +
+      '.rk-sumbar span{font-size:.82rem;color:var(--muted);font-weight:600}' +
+      '.rk-sumbar li.hot{border-color:var(--danger);background:#fde4e4}.rk-sumbar li.hot b,.rk-sumbar li.hot span{color:#7a1a1f}' +
+      '.rk-sumbar li.warm{border-color:var(--warn-line);background:var(--warn-bg)}' +
       '.rk-row.pinned{border-left:5px solid var(--brand)}.rk-row.rk-grey{opacity:.7;background:#f0f3f6}' +
       '.rk-head{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .8rem}' +
       '.rk-rank{font-weight:700;font-size:1.1rem;min-width:2rem;color:var(--brand-dark)}' +
-      '.rk-main{flex:1 1 14rem;min-width:12rem}.rk-score{font-weight:700;font-size:1.05rem;min-width:4.5rem;text-align:right}' +
-      '.rk-actions{display:flex;flex-wrap:wrap;gap:.3rem}' +
+      '.rk-main{flex:1 1 14rem;min-width:12rem}.rk-score{font-weight:700;font-size:1.05rem;flex:0 0 4.5rem;text-align:right;font-variant-numeric:tabular-nums}' +
+      '.rk-actions{display:flex;flex-wrap:nowrap;gap:.3rem;margin-left:auto;justify-content:flex-end}' +
+      '.rk-actions .btn{min-width:2.2rem}.rk-actions [data-act=why]{min-width:8.4rem}.rk-actions [data-act=pin],.rk-actions [data-act=unpin]{min-width:6rem}' +
       '.rk-detail{margin-top:.5rem;padding-top:.5rem;border-top:1px dashed var(--line)}' +
       '.rk-detail ul{margin:.3rem 0 0 1.1rem;padding:0}' +
       '.rk-form{margin-top:.5rem;padding:.6rem;background:var(--brand-tint);border-radius:var(--radius);display:flex;flex-wrap:wrap;gap:.5rem .8rem;align-items:flex-end}' +
       '.rk-form .fld{display:flex;flex-direction:column;gap:.2rem}' +
       '.rk-pending{margin-top:.5rem;padding:.5rem .6rem;background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:var(--radius)}' +
-      '.rk-weights{display:grid;grid-template-columns:repeat(auto-fill,minmax(17rem,1fr));gap:.8rem 1.2rem;margin-top:.7rem}' +
+      '.rk-weights{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem 1.2rem;margin-top:.7rem}' +
       '.rk-weights .w{display:flex;flex-direction:column;gap:.15rem}.rk-weights input[type=range]{padding:0;min-height:28px;width:100%}' +
+      '.rk-wsave{display:flex;flex-direction:column;gap:.4rem;margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--line);max-width:40rem}' +
+      '.rk-weights .w .d{font-size:.85rem}.rk-weights .wh{display:flex;justify-content:space-between;align-items:baseline;gap:.4rem}.rk-weights .wv{color:var(--brand-dark)}' +
+      '.rk-info{cursor:help;color:var(--brand);font-weight:700;border-radius:50%;padding:0 .2rem}' +
       '.rk-gap{background:var(--warn-bg);color:var(--warn-ink);border:1px solid var(--warn-line);border-radius:var(--radius);padding:.5rem .8rem;margin:.6rem 0;font-weight:500}' +
       '.rk-summary{cursor:pointer;font-weight:700;font-size:1.05rem}' +
-      '.rk-esi-h{margin:.9rem 0 .2rem;font-size:.95rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}' +
+      '.rk-esi-h{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .7rem;margin:1.1rem 0 .3rem;padding:.35rem .7rem;font-size:.95rem;border-radius:var(--radius);border-left:5px solid currentColor}' +
+      '.rk-esi-h:first-child{margin-top:.4rem}.rk-esi-h .t{font-weight:700;color:var(--ink)}.rk-esi-h .m{color:var(--ink);font-weight:500;font-size:.88rem;margin-left:auto}' +
+      '.rk-esi-h.esi-1{background:var(--esi1-bg);color:var(--esi1)}.rk-esi-h.esi-2{background:var(--esi2-bg);color:var(--esi2)}.rk-esi-h.esi-3{background:var(--esi3-bg);color:var(--esi3)}' +
+      '.rk-esi-h.esi-4{background:var(--esi4-bg);color:var(--esi4)}.rk-esi-h.esi-5{background:var(--esi5-bg);color:var(--esi5)}' +
+      '.rk-logbox>summary{display:flex;align-items:center;gap:.5rem}.rk-logbox[open]>summary{margin-bottom:.6rem}' +
       '.rk-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:1rem}' +
-      '@media (max-width:1000px){.rk-grid{grid-template-columns:1fr}}';
+      '@media (max-width:1100px){.rk-grid{grid-template-columns:1fr}}';
     document.head.appendChild(st);
   }
 
@@ -160,48 +191,123 @@
     el.innerHTML =
       '<div class="rk-wrap">' +
       '<div id="rk-alerts" role="alert" aria-live="assertive"></div>' +
+      '<ul class="rk-sumbar" id="rk-sumbar" aria-label="Queue summary"></ul>' +
       '<div id="rk-leave" aria-live="polite"></div>' +
       '<div id="rk-offline"></div>' +
-      '<div class="card"><details id="rk-weights-box"><summary class="rk-summary">Scoring weights (nurse-set)</summary>' +
-      '<p class="muted" style="margin-top:.5rem">Points only reorder patients <strong>within</strong> the same ESI level. Adjust a weight and the queue re-ranks immediately. ' +
-      'Insurance is not a scoring input.</p><div class="rk-weights" id="rk-weights"></div>' +
-      '<p><button type="button" class="btn btn-sm" id="rk-reset">Reset weights to defaults</button></p></details></div>' +
+      '<div class="card"><details id="rk-weights-box"><summary class="rk-summary">Scoring weights — set by nurses<br><span class="muted" style="font-weight:500">Adjust how much each factor matters, based on your experience on the floor.</span></summary>' +
+      '<p style="margin-top:.7rem;margin-bottom:.2rem">Set by nurses. Change a weight when the ranking doesn’t match what you see at the bedside — reviewed monthly by the nurse committee.</p>' +
+      '<p class="muted">Points only reorder patients within the same acuity level.</p>' +
+      '<div class="rk-weights" id="rk-weights"></div>' +
+      '<div class="rk-wsave"><label for="rk-w-reason">Why are you changing this? (optional)</label>' +
+      '<input id="rk-w-reason" type="text" maxlength="200" placeholder="e.g. Nights are seeing slow re-checks">' +
+      '<div class="row"><button type="button" class="btn btn-sm btn-primary" id="rk-w-save">Save change</button>' +
+      '<button type="button" class="btn btn-sm" id="rk-reset">Reset weights to defaults</button></div>' +
+      '<p class="muted" id="rk-w-last" role="status" aria-live="polite"></p></div></details></div>' +
       '<div class="rk-grid"><div>' +
       '<div class="card"><h2>Ranked waiting list</h2><p class="muted" id="rk-sub"></p><div id="rk-msg" class="sr-only" aria-live="polite"></div><div id="rk-list"></div></div>' +
       '<div class="card"><details id="rk-fast-box"><summary class="rk-summary" id="rk-fast-sum">Fast-track (not ranked here)</summary><div id="rk-fast"></div></details></div>' +
       '</div><div>' +
-      '<div class="card"><h2>Override log</h2><div id="rk-log"></div></div>' +
+      '<div class="card"><details class="rk-logbox" id="rk-logbox"><summary class="rk-summary">Override log <span class="pill" id="rk-log-n">0</span></summary><div id="rk-log"></div></details></div>' +
       '</div></div>' +
-      '<div class="card"><h2>Fairness check by insurance group</h2><div id="rk-fair"></div></div>' +
       '</div>';
     buildWeights();
   }
 
+  function levelWord(c, v) { return FMT[c.key](v) + (v === c.def ? ' (default)' : ''); }
   function buildWeights() {
     var box = root.querySelector('#rk-weights'), html = '';
     COMPONENTS.forEach(function (c) {
-      html += '<div class="w"><label for="rk-w-' + c.key + '">' + esc(c.label) + ': <span id="rk-wv-' + c.key + '">' + weights[c.key] + '</span></label>' +
-        '<input type="range" id="rk-w-' + c.key + '" data-w="' + c.key + '" min="0" max="' + c.max + '" step="' + c.step + '" value="' + weights[c.key] + '">' +
-        '<span class="muted">' + esc(c.unit) + '</span></div>';
+      html += '<div class="w"><div class="wh"><label for="rk-w-' + c.key + '">' + esc(c.label) + ': <span class="wv" id="rk-wv-' + c.key + '">' + levelWord(c, weights[c.key]) + '</span></label>' +
+        '<span class="rk-info" tabindex="0" role="img" aria-label="' + esc(TIPS[c.key]) + '" title="' + esc(TIPS[c.key]) + '">ⓘ</span></div>' +
+        '<input type="range" id="rk-w-' + c.key + '" data-w="' + c.key + '" min="0" max="' + c.max + '" step="' + c.step + '" value="' + weights[c.key] + '" aria-describedby="rk-wd-' + c.key + '">' +
+        '<span class="muted d" id="rk-wd-' + c.key + '">' + esc(c.desc) + '</span></div>';
     });
     box.innerHTML = html;
   }
+  function saveWeights() {
+    var diffs = [], olds = [];
+    COMPONENTS.forEach(function (c) {
+      if (weights[c.key] !== savedWeights[c.key]) { diffs.push(c.label + ' ' + savedWeights[c.key] + ' → ' + weights[c.key]); olds.push(c.label + ' ' + savedWeights[c.key]); }
+    });
+    var note = root.querySelector('#rk-w-last');
+    if (!diffs.length) { note.textContent = 'No weight changes to save.'; return; }
+    var reasonEl = root.querySelector('#rk-w-reason'), reason = reasonEl.value.trim(), nurse = H.state.settings.nurse;
+    COMPONENTS.forEach(function (c) { savedWeights[c.key] = weights[c.key]; });
+    lastWeightChange = { nurse: nurse, time: U.fmtTime(U.now()), reason: reason };
+    reasonEl.value = '';
+    H.logOverride({ module: 'ranking', patient_id: null, ai_suggestion: 'Previous scoring weights: ' + olds.join(', '),
+      nurse_decision: 'Scoring weights changed: ' + diffs.join('; '), reason: reason || 'No reason given (weights set by nurse)', nurse: nurse });
+    note.textContent = 'Last changed by ' + nurse + ' at ' + lastWeightChange.time + (reason ? ' — reason: ' + reason : ' — no reason given');
+  }
 
-  function renderAlerts() {
-    var html = '';
+  var assessed = [], lastAlertHtml = null;
+  var WARN_SVG = '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false"><path d="M12 2.5 1.8 20.5h20.4L12 2.5z" fill="#fff" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9v5.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="17.4" r="1.4" fill="currentColor"/></svg>';
+  function ago(t) {
+    var m = Math.max(0, Math.round(U.minutesBetween(t, U.now())));
+    if (m < 1) return 'just now';
+    if (m < 60) return m + ' min ago';
+    return Math.floor(m / 60) + ' h ' + (m % 60) + ' min ago';
+  }
+  function activeFlags() {
+    var out = [];
     H.state.patients.forEach(function (p) {
-      (p.symptom_updates || []).forEach(function (u) {
-        if (u.red_flag && !u.confirmed_by && !u.dismissed_by) {
-          html += '<div class="rk-alert">Nurse paged: ' + esc(p.id) + ' (ESI ' + esc(p.esi) + ', ' + esc(p.chief_complaint) + ') reported red-flag symptoms' +
-            (u.symptoms && u.symptoms.length ? ': ' + esc(u.symptoms.join(', ')) : '') +
-            (u.ai_summary ? '. ' + (u.ai_source === 'claude' ? 'AI summary' : 'Patient wrote') + ': ' + esc(u.ai_summary.replace(/^Patient wrote: /, '')) : '') +
-            (u.red_flag_reason ? ' (' + esc(u.red_flag_reason) + ')' : '') +
-            '. Assess now; red flags bypass scoring. ' +
-            '<button type="button" class="btn btn-sm" data-act="ack" data-id="' + esc(p.id) + '" data-i="' + (p.symptom_updates.indexOf(u)) + '">I have assessed this patient</button></div>';
-        }
+      (p.symptom_updates || []).forEach(function (u, i) {
+        if (u.red_flag && !u.confirmed_by && !u.dismissed_by) out.push({ p: p, u: u, i: i });
       });
     });
-    root.querySelector('#rk-alerts').innerHTML = html;
+    return out;
+  }
+  function whoWords(p) {
+    var minor = p.age != null && p.age < 18, noun = p.sex === 'M' ? (minor ? 'boy' : 'man') : p.sex === 'F' ? (minor ? 'girl' : 'woman') : 'patient';
+    return p.age != null ? esc(p.age) + '-year-old ' + noun : noun;
+  }
+  function flagCard(f) {
+    var p = f.p, u = f.u, id = esc(p.id), syms = u.symptoms || [], h;
+    h = '<article class="rk-flag" aria-label="Red flag, nurse paged, patient ' + id + '">' +
+      '<div class="rk-flag-icon">' + WARN_SVG + '</div><div class="rk-flag-body">' +
+      '<h2 class="rk-flag-title">Red flag — nurse paged <span class="rk-flag-time">· reported ' + esc(ago(u.time)) + '</span></h2>' +
+      '<p class="rk-flag-line">Patient ' + id + ' · ' + whoWords(p) + ' · Acuity: ESI ' + esc(p.esi) + '</p>' +
+      '<p class="rk-flag-line">Came in for: ' + esc(p.chief_complaint) + '</p>' +
+      (syms.length ? '<p class="rk-flag-line">New symptoms reported: <strong>' + esc(syms.join(', ')) + '</strong></p>' : '');
+    if (u.ai_summary || u.red_flag_reason) {
+      h += '<p class="rk-flag-line">' + (u.ai_summary ? (u.ai_source === 'claude' ? 'AI summary: ' : 'Patient wrote: ') + esc(u.ai_summary.replace(/^Patient wrote: /, '')) : '') +
+        (u.red_flag_reason ? ' <span class="muted">(' + esc(u.red_flag_reason) + ')</span>' : '') + '</p>';
+    }
+    h += '<p class="rk-flag-help">Red flags skip scoring — assess now.</p></div>' +
+      '<div class="rk-flag-actions"><button type="button" class="btn btn-danger" data-act="ack" data-id="' + id + '" data-i="' + f.i + '">Mark assessed</button>' +
+      '<button type="button" class="btn" data-act="show-row" data-id="' + id + '">Show in queue</button></div></article>';
+    return h;
+  }
+  function renderAlerts() {
+    var flags = activeFlags(), html = '';
+    if (flags.length > 1) html += '<h2 class="rk-flag-count">' + flags.length + ' red flags</h2>';
+    flags.forEach(function (f) { html += flagCard(f); });
+    assessed.slice(-3).forEach(function (a) {
+      html += '<p class="rk-assessed" role="status"><span aria-hidden="true">✓</span> ' + esc(a.id) + ' assessed by ' + esc(a.nurse) + ' at ' + esc(a.time) + '</p>';
+    });
+    if (html !== lastAlertHtml) { root.querySelector('#rk-alerts').innerHTML = html; lastAlertHtml = html; }
+    return flags.length;
+  }
+
+  function rankingLog() { return H.state.overrides.filter(function (o) { return o.module === 'ranking'; }); }
+
+  function renderSummary(q, nFlags) {
+    var pend = 0, ov = rankingLog().length;
+    H.state.patients.forEach(function (p) { pendingUpdates(p).forEach(function (x) { if (!x.u.red_flag) pend++; }); });
+    function t(n, label, cls) { return '<li' + (cls ? ' class="' + cls + '"' : '') + '><b>' + n + '</b><span>' + label + '</span></li>'; }
+    root.querySelector('#rk-sumbar').innerHTML = t(q.ranked.length, 'Waiting') + t(nFlags, nFlags === 1 ? 'Red flag' : 'Red flags', nFlags ? 'hot' : '') +
+      t(pend, 'Symptom updates pending', pend ? 'warm' : '') + t(ov, ov === 1 ? 'Logged override' : 'Logged overrides');
+  }
+
+  function showRow(id) {
+    var row = root.querySelector('[data-row="' + id + '"]');
+    if (!row) { lastMsg = id + ' is not in the ranked list.'; root.querySelector('#rk-msg').textContent = lastMsg; return; }
+    var top = row.getBoundingClientRect().top + window.pageYOffset - (document.querySelector('.app-top') || { offsetHeight: 0 }).offsetHeight - 12;
+    window.scrollTo(0, Math.max(0, top));
+    row.classList.remove('rk-flash'); void row.offsetWidth; row.classList.add('rk-flash');
+    row.setAttribute('tabindex', '-1'); row.focus({ preventScroll: true });
+    root.querySelector('#rk-msg').textContent = 'Showing ' + id + ' in the queue.';
+    setTimeout(function () { row.classList.remove('rk-flash'); }, 2900);
   }
 
   /* Patients who tapped "I'm thinking of leaving": AI drafts a plan, a nurse must approve it before the patient sees it. */
@@ -306,9 +412,15 @@
     root.querySelector('#rk-sub').textContent = q.ranked.length + ' waiting. Order: ESI level first (1 = most urgent)' +
       (offline ? ', then arrival time (AI offline).' : ', then score within the level, then arrival time.');
     if (!q.ranked.length) html = '<p class="muted">No patients are waiting.</p>';
+    var cnt = {}, LVL = { 1: 'Resuscitation', 2: 'Emergent', 3: 'Urgent', 4: 'Less urgent', 5: 'Non-urgent' };
+    q.ranked.forEach(function (r) { cnt[r.p.esi] = (cnt[r.p.esi] || 0) + 1; });
     q.ranked.forEach(function (r, i) {
-      var prev = q.ranked[i - 1], next = q.ranked[i + 1];
-      if (r.p.esi !== lastEsi) { html += '<h3 class="rk-esi-h">ESI ' + esc(r.p.esi) + ' (target wait ' + TARGET[r.p.esi] + ' min)</h3>'; lastEsi = r.p.esi; }
+      var prev = q.ranked[i - 1], next = q.ranked[i + 1], e = r.p.esi;
+      if (e !== lastEsi) {
+        html += '<h3 class="rk-esi-h esi-' + esc(e) + '"><span class="t">ESI ' + esc(e) + ' · ' + LVL[e] + '</span><span class="m">' + cnt[e] + ' waiting · target wait ' +
+          (TARGET[e] ? TARGET[e] + ' min' : 'immediate') + '</span></h3>';
+        lastEsi = e;
+      }
       html += rowHtml(r, { first: !prev || prev.p.esi !== r.p.esi, last: !next || next.p.esi !== r.p.esi });
     });
     root.querySelector('#rk-list').innerHTML = html;
@@ -328,7 +440,7 @@
   }
 
   function renderLog() {
-    var items = H.state.overrides.filter(function (o) { return o.module === 'ranking'; }).slice().reverse();
+    var items = rankingLog().slice().reverse();
     var h = items.length ? '<div class="table-wrap"><table class="table"><thead><tr><th>Time</th><th>Patient</th><th>Decision</th><th>Reason</th></tr></thead><tbody>' : '<p class="muted">No overrides logged yet.</p>';
     items.forEach(function (o) {
       h += '<tr><td>' + esc(U.fmtTime(o.time)) + '</td><td>' + esc(o.patient_id) + '</td><td>' + esc(o.nurse_decision) +
@@ -336,78 +448,17 @@
     });
     if (items.length) h += '</tbody></table></div>';
     root.querySelector('#rk-log').innerHTML = h;
-  }
-
-  function renderFairness(q) {
-    var offline = H.state.aiOffline, hist = (H.data && H.data.history) || [];
-    var esiMeans = {};
-    var byEsi = {};
-    q.ranked.forEach(function (r) { (byEsi[r.p.esi] = byEsi[r.p.esi] || []).push(r.s.total); });
-    Object.keys(byEsi).forEach(function (k) { esiMeans[k] = mean(byEsi[k]); });
-    // Same-acuity baseline: each past visit's door-to-provider time minus the average for its ESI level.
-    var esiD2p = {};
-    hist.forEach(function (x) { var v = x.outcome && x.outcome.door_to_provider_min; if (v != null) (esiD2p[x.esi] = esiD2p[x.esi] || []).push(v); });
-    Object.keys(esiD2p).forEach(function (k) { esiD2p[k] = mean(esiD2p[k]); });
-    var stats = {};
-    GROUPS.forEach(function (g) {
-      var rows = q.ranked.filter(function (r) { return r.p.insurance === g; });
-      var hr = hist.filter(function (x) { return x.insurance === g; });
-      var d2p = hr.map(function (x) { return x.outcome && x.outcome.door_to_provider_min; }).filter(function (v) { return v != null; });
-      var lw = hr.filter(function (x) { return x.outcome && x.outcome.disposition === 'lwbs'; }).length;
-      stats[g] = {
-        n: rows.length,
-        wait: median(rows.map(function (r) { return waitMin(r.p); })),
-        diff: mean(rows.map(function (r) { return r.s.total - esiMeans[r.p.esi]; })),
-        score: mean(rows.map(function (r) { return r.s.total; })),
-        ov: H.state.overrides.filter(function (o) { var pt = H.getPatient(o.patient_id); return pt && pt.insurance === g; }).length,
-        hn: hr.length, d2p: median(d2p), lwbs: hr.length ? 100 * lw / hr.length : null,
-        sameEsi: mean(hr.filter(function (x) { return x.outcome && x.outcome.door_to_provider_min != null; })
-          .map(function (x) { return x.outcome.door_to_provider_min - esiD2p[x.esi]; }))
-      };
-    });
-    var h = '<div class="table-wrap"><table class="table"><thead><tr><th>Insurance group</th><th class="num">Waiting now</th><th class="num">Median current wait (min)</th>' +
-      '<th class="num">Mean AI score</th><th class="num">Score vs ESI average</th><th class="num">Overrides</th>' +
-      '<th class="num">Hist. median door-to-provider (min)</th><th class="num">Hist. wait vs same-ESI average (min)</th><th class="num">Hist. LWBS %</th></tr></thead><tbody>';
-    GROUPS.forEach(function (g) {
-      var s = stats[g], hl = g === 'uninsured' || g === 'medicaid' || g === 'commercial';
-      h += '<tr' + (hl ? ' style="background:#f3f8fc"' : '') + '><th scope="row" style="text-align:left;position:static;background:none;text-transform:capitalize">' + esc(g) + '</th>' +
-        '<td class="num">' + s.n + '</td><td class="num">' + fmt(s.wait) + '</td>' +
-        '<td class="num">' + (offline ? '—' : fmt(s.score, 1)) + '</td><td class="num">' + (offline || s.diff == null ? '—' : (s.diff > 0 ? '+' : '') + s.diff.toFixed(1)) + '</td>' +
-        '<td class="num">' + s.ov + '</td><td class="num">' + fmt(s.d2p) + '</td><td class="num">' + (s.sameEsi == null ? '—' : (s.sameEsi > 0 ? '+' : '') + s.sameEsi.toFixed(1)) + '</td>' +
-        '<td class="num">' + (s.lwbs == null ? '—' : s.lwbs.toFixed(1) + '%') + '</td></tr>';
-    });
-    h += '</tbody></table></div>';
-    var u = stats.uninsured, c = stats.commercial, md = stats.medicaid, notes = [];
-    if (u.wait != null && c.wait != null) {
-      notes.push('Current median wait: uninsured ' + fmt(u.wait) + ' min vs commercial ' + fmt(c.wait) + ' min (gap ' + fmt(u.wait - c.wait) + ' min).');
-    }
-    if (u.d2p != null && c.d2p != null) {
-      notes.push('Historical door-to-provider: uninsured ' + fmt(u.d2p) + ' vs commercial ' + fmt(c.d2p) + ' min (gap ' + fmt(u.d2p - c.d2p) + ' min).');
-    }
-    if (u.lwbs != null && c.lwbs != null) {
-      notes.push('Historical LWBS: uninsured ' + u.lwbs.toFixed(1) + '% vs commercial ' + c.lwbs.toFixed(1) + '% (gap ' + (u.lwbs - c.lwbs).toFixed(1) + ' points).');
-    }
-    if (u.sameEsi != null && md.sameEsi != null && c.sameEsi != null) {
-      notes.push('Same-acuity gap (our equity measure): uninsured ' + (u.sameEsi - c.sameEsi).toFixed(1) + ' min and Medicaid ' + (md.sameEsi - c.sameEsi).toFixed(1) +
-        ' min longer than commercial patients at the same ESI level.');
-    }
-    if (md.lwbs != null && c.lwbs != null) notes.push('Historical LWBS: Medicaid ' + md.lwbs.toFixed(1) + '% vs commercial ' + c.lwbs.toFixed(1) + '%.');
-    if (!hist.length) notes.push('Historical baseline is not loaded.');
-    var flagged = (u.d2p != null && c.d2p != null && u.d2p - c.d2p >= 5) || (u.lwbs != null && c.lwbs != null && u.lwbs - c.lwbs >= 1) ||
-      (u.wait != null && c.wait != null && u.wait - c.wait >= 10);
-    h += '<div class="rk-gap"><strong>Uninsured and Medicaid vs commercial' + (flagged ? ': gap worth reviewing' : '') + '.</strong> ' + esc(notes.join(' ')) + '</div>';
-    h += '<p class="muted">Insurance is not used in scoring — shown for fairness monitoring only. Small groups give noisy current-queue numbers; the historical baseline (' + hist.length + ' past visits) is steadier. Score vs ESI average compares each group with other patients at the same ESI level.</p>';
-    root.querySelector('#rk-fair').innerHTML = h;
+    root.querySelector('#rk-log-n').textContent = items.length;
   }
 
   function refresh() {
     if (!root) return;
-    renderAlerts();
+    var nFlags = renderAlerts();
     renderLeave();
     renderOffline();
     var q = renderList();
+    renderSummary(q, nFlags);
     renderLog();
-    renderFairness(q);
   }
 
   /* ---------- actions ---------- */
@@ -460,7 +511,10 @@
       var u = setUpdate(id, i, { dismissed_by: H.state.settings.nurse });
       if (u) H.logOverride({ module: 'ranking', patient_id: id, ai_suggestion: 'Count symptom update toward score once confirmed',
         nurse_decision: 'Dismissed symptom update', reason: 'Nurse reviewed and dismissed the update' });
+    } else if (act === 'show-row') {
+      showRow(id);
     } else if (act === 'ack') {
+      assessed.push({ id: id, nurse: H.state.settings.nurse, time: U.fmtTime(U.now()) });
       setUpdate(id, i, { dismissed_by: H.state.settings.nurse, red_flag_assessed: true });
     } else if (act === 'leave-send' || act === 'leave-talked') {
       var n = (H.state.leaveNotices || [])[i];
@@ -500,7 +554,8 @@
     if (!k) return;
     weights[k] = parseFloat(t.value);
     var out = root.querySelector('#rk-wv-' + k);
-    if (out) out.textContent = weights[k];
+    var comp = COMPONENTS.filter(function (c) { return c.key === k; })[0];
+    if (out) out.textContent = levelWord(comp, weights[k]);
     refresh();
   }
 
@@ -513,6 +568,7 @@
       el.addEventListener('click', onClick);
       el.addEventListener('submit', onSubmit);
       el.addEventListener('input', onInput);
+      root.querySelector('#rk-w-save').addEventListener('click', saveWeights);
       root.querySelector('#rk-reset').addEventListener('click', function () {
         COMPONENTS.forEach(function (c) { weights[c.key] = c.def; });
         buildWeights();

@@ -1,11 +1,11 @@
-/* Patient view: simulates the page that opens from the wristband QR / SMS link. Large text, plain language, EN/ES. */
+/* Patient view: simulates the page that opens from the SMS link. Large text, plain language, EN/ES. */
 (function () {
   'use strict';
   var H = window.Halvian, esc = H.util.esc;
 
   var T = {
     en: {
-      demo: 'Demo: choose patient (simulates scanning wristband QR)', lang: 'Language',
+      demo: 'Demo: choose a patient (simulates opening the SMS link)', lang: 'Language',
       hello: 'Hello, your visit ID', status: 'Where you are now',
       st_waiting: 'You are checked in and waiting to be seen.', st_fast: 'You are on our fast-track path for quicker, simpler problems. A staff member will call you.',
       st_roomed: 'You have been called back to a room.', st_left: 'Our records show you have left.',
@@ -33,7 +33,7 @@
       s_fever: 'Fever or chills', s_pain: 'Pain getting worse', s_head: 'Headache', s_other: 'Something else', none: 'No patient selected.'
     },
     es: {
-      demo: 'Demo: elija paciente (simula escanear el código QR de la pulsera)', lang: 'Idioma',
+      demo: 'Demo: elija un paciente (simula abrir el enlace del mensaje de texto)', lang: 'Idioma',
       hello: 'Hola, su número de visita', status: 'Dónde está ahora',
       st_waiting: 'Ya se registró y está esperando ser atendido.', st_fast: 'Está en nuestra vía rápida para problemas más simples. Un miembro del personal lo llamará.',
       st_roomed: 'Lo llamaron a una sala.', st_left: 'Nuestros registros indican que ya se fue.',

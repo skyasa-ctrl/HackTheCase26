@@ -148,12 +148,7 @@
       $('cap-cards').innerHTML =
         card('Open ED rooms', ed.open + ' / ' + ed.total, ed.cleaning + ' cleaning, ' + ed.occupied + ' occupied, ' + ed.boarding + ' boarding') +
         card('Open fast-track rooms', ft.open + ' / ' + ft.total, ft.cleaning + ' cleaning, ' + ft.occupied + ' occupied') +
-        card('Boarding patients', s.boardingTotal, s.boardingEd + ' in ED rooms, ' + (s.boardingTotal - s.boardingEd) + ' in other rooms') +
-        '<div class="card" style="grid-column:1/-1"><div class="muted">Boarding cost right now</div>' +
-        '<div class="cap-stat">$' + s.boardingCost.toLocaleString('en-US') + '</div>' +
-        '<p class="muted" style="margin:0">' + s.boardingEd + ' ED rooms boarding, ' + s.boardingBedHours.toFixed(1) + ' bed-hours so far today x $' + COST_PER_ED_BED_HOUR +
-        ' per ED bed-hour (case figure) = about ' + s.boardingBedHours.toFixed(1) + ' hours of ED capacity lost today. ' +
-        'Median boarding is 3.5 h at Halvian vs 2&ndash;2.5 h nationally.</p></div>';
+        card('Boarding patients', s.boardingTotal, s.boardingEd + ' in ED rooms, ' + (s.boardingTotal - s.boardingEd) + ' in other rooms');
     }
 
     function renderBoard() {

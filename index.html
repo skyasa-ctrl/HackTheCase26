@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="src/shared/styles.css">
 </head>
 <body>
+  <div class="app-top">
   <div class="banner-synthetic" role="note">Synthetic data — demo only</div>
   <header class="app-header">
     <h1>Halvian ED Triage Assistant</h1>
@@ -27,21 +28,24 @@
       <span>AI offline</span>
     </label>
   </header>
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" id="tab-queue" data-tab="queue" aria-controls="panel-queue" aria-selected="true">Queue <span class="tab-count" id="count-queue" hidden></span></button>
+    <button class="tab" role="tab" id="tab-fasttrack" data-tab="fasttrack" aria-controls="panel-fasttrack" aria-selected="false" tabindex="-1">Fast-track <span class="tab-count" id="count-fasttrack" hidden></span></button>
+    <button class="tab" role="tab" id="tab-capacity" data-tab="capacity" aria-controls="panel-capacity" aria-selected="false" tabindex="-1">Capacity <span class="tab-count" id="count-capacity" hidden></span></button>
+    <button class="tab" role="tab" id="tab-results" data-tab="results" aria-controls="panel-results" aria-selected="false" tabindex="-1">Results</button>
+    <button class="tab" role="tab" id="tab-patient" data-tab="patient" aria-controls="panel-patient" aria-selected="false" tabindex="-1">Patient view</button>
+  </nav>
+  </div>
   <div class="banner-warning in-app" id="ai-offline-banner" role="status" hidden>
     AI is offline. Suggestions are paused and the queue falls back to acuity (ESI) level, then arrival time. Nurses keep full control.
   </div>
 
-  <nav class="tabs" role="tablist" aria-label="Sections">
-    <button class="tab" role="tab" id="tab-queue" data-tab="queue" aria-controls="panel-queue" aria-selected="true">Queue</button>
-    <button class="tab" role="tab" id="tab-fasttrack" data-tab="fasttrack" aria-controls="panel-fasttrack" aria-selected="false" tabindex="-1">Fast-track</button>
-    <button class="tab" role="tab" id="tab-capacity" data-tab="capacity" aria-controls="panel-capacity" aria-selected="false" tabindex="-1">Capacity</button>
-    <button class="tab" role="tab" id="tab-patient" data-tab="patient" aria-controls="panel-patient" aria-selected="false" tabindex="-1">Patient view</button>
-  </nav>
 
   <main>
     <section role="tabpanel" id="panel-queue" aria-labelledby="tab-queue"><div id="mod-ranking"></div></section>
     <section role="tabpanel" id="panel-fasttrack" aria-labelledby="tab-fasttrack" hidden><div id="mod-fasttrack"></div></section>
     <section role="tabpanel" id="panel-capacity" aria-labelledby="tab-capacity" hidden><div id="mod-capacity"></div></section>
+    <section role="tabpanel" id="panel-results" aria-labelledby="tab-results" hidden><div id="mod-results"></div></section>
     <section role="tabpanel" id="panel-patient" aria-labelledby="tab-patient" hidden><div id="mod-patientview"></div></section>
   </main>
 
@@ -52,11 +56,14 @@
   <script src="data/history.js"></script>
   <script src="data/rooms.js"></script>
   <script src="data/fasttrack_model.js"></script>
+  <script src="data/results.js"></script>
   <script src="src/shared/core.js"></script>
   <script src="src/shared/ai.js"></script>
   <script src="src/ranking/ranking.js"></script>
   <script src="src/fasttrack/fasttrack.js"></script>
   <script src="src/fasttrack/patientview.js"></script>
   <script src="src/capacity/capacity.js"></script>
+  <script src="src/results/results.js"></script>
+  <script src="src/shared/tabcounts.js"></script>
 </body>
 </html>
