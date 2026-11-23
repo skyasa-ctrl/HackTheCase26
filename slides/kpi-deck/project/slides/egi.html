@@ -1,0 +1,41 @@
+<section id="egi">
+  <h2>Equity Gap Index (EGI)</h2>
+  <div class="row gap">
+    <div class="col" style="width:660px;gap:24px">
+      <div class="band"><p>EGI = average of (current gap ÷ baseline gap) × 100, across the 4 gaps</p></div>
+      <p class="lbl"><b>100</b> = today. <b>Below 100</b> = gaps shrinking. <b>Above 100</b> = widening. Two months running pauses the tool.</p>
+      <div class="card">
+        <p class="small"><b>Month-18 target</b></p>
+        <p class="small">8÷16 = 0.50 · 5÷10 = 0.50</p>
+        <p class="small">0.5÷2.8 = 0.18 · 0.3÷1.6 = 0.19</p>
+        <p class="small">Average 0.34 × 100 = <b>EGI ≈ 34</b></p>
+      </div>
+    </div>
+    <div class="col">
+      <p class="lbl" style="margin-bottom:12px"><b>Target path, not results</b></p>
+      <div class="chartbox">
+        <svg width="940" height="480" viewBox="0 0 940 480" xmlns="http://www.w3.org/2000/svg">
+          <line x1="60" y1="40" x2="60" y2="440" stroke="#3B4558" stroke-width="3"/>
+          <line x1="60" y1="440" x2="880" y2="440" stroke="#3B4558" stroke-width="3"/>
+          <line x1="60" y1="40" x2="880" y2="40" stroke="#C9D1E0" stroke-width="2"/>
+          <line x1="60" y1="240" x2="880" y2="240" stroke="#C9D1E0" stroke-width="2"/>
+          <polyline points="60,40 327,100 860,304" fill="none" stroke="#2563EB" stroke-width="5" stroke-dasharray="14 10"/>
+          <circle cx="60" cy="40" r="12" fill="#14213D"/>
+          <circle cx="327" cy="100" r="12" fill="#D97706"/>
+          <circle cx="860" cy="304" r="12" fill="#D97706"/>
+        </svg>
+        <p class="tag" style="left:0;top:10px;width:50px">100</p>
+        <p class="tag" style="left:0;top:227px;width:50px">50</p>
+        <p class="tag" style="left:0;top:427px;width:50px">0</p>
+        <p class="tag" style="left:84px;top:6px;width:400px">100 = today (Month 0)</p>
+        <p class="tag" style="left:350px;top:50px;width:400px">≤ 85 at Month 6</p>
+        <p class="tag r" style="left:560px;top:250px;width:280px">≈ 34 at Month 18</p>
+        <p class="tag" style="left:10px;top:456px;width:120px">Month 0</p>
+        <p class="tag c" style="left:267px;top:456px;width:120px">Month 6</p>
+        <p class="tag r" style="left:760px;top:456px;width:130px">Month 18</p>
+      </div>
+    </div>
+  </div>
+  <p class="src">Sources: ROADMAP.md §2.1; Month-6 point is a team planning value, not a documented target</p>
+  <aside>The Equity Gap Index rolls the four gaps into one number, where one hundred means today. If every target is met, the index falls to about thirty-four by Month 18. The line shows our target path, not results, and the Month-6 point is a planning value we will confirm with the committee.</aside>
+</section>
