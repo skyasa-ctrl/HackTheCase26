@@ -17,6 +17,7 @@
   function fmt(n, d) { return n == null || isNaN(n) ? '—' : Number(n).toFixed(d == null ? 0 : d); }
   function dec(k) { return k.unit === '%' ? 1 : 1; }
   function val(k, v) { return fmt(v, dec(k)) + (k.unit === '%' ? '%' : ' min'); }
+  function valFine(k, v) { return k.unit === '%' ? fmt(v, 2) + '%' : val(k, v); }  // 2 decimals for % so small path gaps are visible
 
   /* ---------- gaps and Equity Gap Index ---------- */
   function gapSeries(r) {
@@ -56,21 +57,56 @@
     if (Math.abs(d) < 0.05) return 'No change';
     return (d < 0 ? 'Improved: down ' : 'Worse: up ') + fmt(Math.abs(d), 1) + unit + ' (' + fmt(Math.abs(d) / k.baseline * 100, 0) + '%)';
   }
-  function kpiCard(k, extra) {
-    var latest = k.series[k.series.length - 1], d = latest - k.baseline;
-    return '<div class="rs-kpi"><h3>' + esc(k.label) + '</h3>' +
+  /* ---------- traffic-light status vs the path to the Month-18 target (Roadmap §2.1) ----------
+   * Path = straight line from baseline to target over 18 months; at Month m it is baseline + (target - baseline) * m / 18.
+   * Green: on or ahead of the path (5% tolerance of the total distance). Amber: behind the path but better than baseline.
+   * Red: no better than baseline. Actions come from the Roadmap "If off track" column. */
+  var ACTIONS = {
+    d2p: 'Review fast-track use and room-status updates; add fast-track APP hours at Monday peaks.',
+    lwbs: 'Check "thinking of leaving" alerts and patient-link uptake; add a waiting-room nurse round on surge days.',
+    unins_wait_gap: 'Audit scores and overrides for uninsured patients; add kiosk staffing and nurse rounding for this group.',
+    medicaid_wait_gap: 'Audit scores and overrides for Medicaid patients; expand nurse rounding and Spanish kiosk support before the next shift expansion.',
+    unins_lwbs: 'Target "thinking of leaving" outreach to uninsured patients; check link uptake by language and add a nurse round.',
+    medicaid_lwbs: 'Target "thinking of leaving" outreach to Medicaid patients; check link uptake by language and add a nurse round.'
+  };
+  function status(k) {
+    var m = k.series.length - 1, latest = k.series[m], dist = k.target - k.baseline;
+    var path = k.baseline + dist * m / 18, tol = Math.abs(dist) * 0.05;
+    var better = dist < 0 ? function (a, b) { return a < b; } : function (a, b) { return a > b; };
+    var level = !better(latest, k.baseline) ? 'red' : (better(latest, path) || Math.abs(latest - path) <= tol) ? 'green' : 'amber';
+    return { level: level, path: path };
+  }
+  var STATUS_TEXT = { green: 'On track', amber: 'Behind path', red: 'Off track' };
+  var STATUS_PILL = { green: 'ok', amber: 'warn', red: 'danger' };
+
+  function kpiCard(k, extra, key) {
+    var latest = k.series[k.series.length - 1], d = latest - k.baseline, st = status(k);
+    var badge = '<span class="pill ' + STATUS_PILL[st.level] + '" style="margin-left:.4rem;font-size:.78rem">' + (st.level === 'green' ? '● ' : '▲ ') + STATUS_TEXT[st.level] + '</span>';
+    var action = st.level === 'green' ? '' :
+      '<div class="banner-warning" role="note" style="margin-top:.5rem;padding:.45rem .6rem;font-size:.88rem"><strong>' +
+      (st.level === 'red' ? 'Red: pause the feature involved and review. ' : 'Amber: committee finds the cause within 1 week. ') +
+      '</strong>Action: ' + esc(ACTIONS[key] || 'Review with the nurse committee.') + '</div>';
+    return '<div class="rs-kpi"><h3>' + esc(k.label) + badge + '</h3>' +
       '<div class="rs-kpi-main"><div class="rs-big">' + val(k, latest) + '</div>' + spark(k.series, k.target, 120, 40, k.label + ', Month 0 to 6 trend, target dashed') + '</div>' +
-      '<dl class="rs-dl"><div><dt>Baseline</dt><dd>' + val(k, k.baseline) + '</dd></div><div><dt>Latest (Month 6)</dt><dd>' + val(k, latest) + '</dd></div>' +
+      '<dl class="rs-dl"><div><dt>Baseline</dt><dd>' + val(k, k.baseline) + '</dd></div><div><dt>Latest (Month 6)</dt><dd>' + valFine(k, latest) + '</dd></div>' +
+      '<div><dt>Month-6 path</dt><dd>' + valFine(k, st.path) + '</dd></div>' +
       '<div><dt>Target (Month 18)</dt><dd>≤ ' + val(k, k.target) + '</dd></div></dl>' +
-      '<p class="rs-change ' + (d < 0 ? 'good' : 'bad') + '">' + esc(changeText(k, latest)) + '</p>' + (extra || '') + '</div>';
+      '<p class="rs-change ' + (d < 0 ? 'good' : 'bad') + '">' + esc(changeText(k, latest)) + '</p>' + (extra || '') + action + '</div>';
   }
 
   /* ---------- sections ---------- */
   function sectionPilot(r) {
     var k = r.kpis, gaps = gapSeries(r), last = r.months.length - 1;
     var series = r.months.map(function (m, i) { return egi(gaps, i); }), tgt = egi(gaps, 0, targetGaps(r)), cur = series[last];
-    var h = '<div class="card"><h2>Headline progress</h2><p class="muted">Month 0 is today’s baseline from the case. Targets are the draft Month-18 goals.</p>' +
-      '<div class="rs-grid">' + kpiCard(k.d2p) + kpiCard(k.lwbs) + '</div></div>';
+    var keys = ['d2p', 'lwbs', 'unins_wait_gap', 'medicaid_wait_gap', 'unins_lwbs', 'medicaid_lwbs'];
+    var counts = { green: 0, amber: 0, red: 0 };
+    keys.forEach(function (key) { if (k[key]) counts[status(k[key]).level]++; });
+    var h = '<div class="card"><h2>Month-6 check: ' + counts.green + ' on track, ' + counts.amber + ' behind path' + (counts.red ? ', ' + counts.red + ' off track' : '') + '</h2>' +
+      '<p class="muted" style="margin:0">Each goal is compared with a straight-line path from baseline to its Month-18 target. ' +
+      '<span class="pill ok">● On track</span> on or ahead of the path · <span class="pill warn">▲ Behind path</span> the committee finds the cause within a week and acts · ' +
+      '<span class="pill danger">▲ Off track</span> no better than baseline: pause the feature involved (Roadmap §2.1, Risk §4.3).</p></div>';
+    h += '<div class="card"><h2>Headline progress</h2><p class="muted">Month 0 is today’s baseline from the case. Targets are the draft Month-18 goals.</p>' +
+      '<div class="rs-grid">' + kpiCard(k.d2p, '', 'd2p') + kpiCard(k.lwbs, '', 'lwbs') + '</div></div>';
     h += '<div class="card"><h2>Equity: gaps vs commercial patients</h2>' +
       '<p class="muted">Insurance is never used in scoring — shown only to measure gaps between groups.</p>' +
       '<div class="rs-egi"><div><div class="muted">Equity Gap Index (EGI)</div><div class="rs-big">' + fmt(cur, 0) + '</div>' +
@@ -79,9 +115,9 @@
       '<p class="muted rs-egi-note">EGI = average of (current gap ÷ baseline gap) across the four gaps below × 100. 100 = today, below 100 = gaps shrinking, above 100 = widening. Month 0: 100 · Month 6: ' + fmt(cur, 0) +
       ' · Month-18 target: about ' + fmt(tgt, 0) + '.</p></div>' +
       '<div class="rs-grid">' +
-      kpiCard(k.unins_wait_gap) + kpiCard(k.medicaid_wait_gap) +
-      kpiCard(k.unins_lwbs, '<p class="muted">Gap vs commercial ' + fmt(r.commercial_lwbs, 1) + '%: ' + fmt(k.unins_lwbs.series[last] - r.commercial_lwbs, 1) + ' pts (baseline ' + fmt(gaps.ul[0], 1) + ' pts).</p>') +
-      kpiCard(k.medicaid_lwbs, '<p class="muted">Gap vs commercial ' + fmt(r.commercial_lwbs, 1) + '%: ' + fmt(k.medicaid_lwbs.series[last] - r.commercial_lwbs, 1) + ' pts (baseline ' + fmt(gaps.ml[0], 1) + ' pts).</p>') +
+      kpiCard(k.unins_wait_gap, '', 'unins_wait_gap') + kpiCard(k.medicaid_wait_gap, '', 'medicaid_wait_gap') +
+      kpiCard(k.unins_lwbs, '<p class="muted">Gap vs commercial ' + fmt(r.commercial_lwbs, 1) + '%: ' + fmt(k.unins_lwbs.series[last] - r.commercial_lwbs, 1) + ' pts (baseline ' + fmt(gaps.ul[0], 1) + ' pts).</p>', 'unins_lwbs') +
+      kpiCard(k.medicaid_lwbs, '<p class="muted">Gap vs commercial ' + fmt(r.commercial_lwbs, 1) + '%: ' + fmt(k.medicaid_lwbs.series[last] - r.commercial_lwbs, 1) + ' pts (baseline ' + fmt(gaps.ml[0], 1) + ' pts).</p>', 'medicaid_lwbs') +
       '</div></div>';
     return h;
   }
