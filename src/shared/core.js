@@ -8,7 +8,7 @@
  *   Halvian.emit(evt, payload)
  *   Halvian.util.{now, minutesBetween, fmtTime, iso, esc, clone, esiArrivalCompare}
  *   Halvian.logOverride({module, patient_id, ai_suggestion, nurse_decision, reason, nurse})
- *   Halvian.registerModule(name, {mount(containerEl)})   names: ranking | fasttrack | capacity | patientview
+ *   Halvian.registerModule(name, {mount(containerEl)})   names: ranking | fasttrack | capacity | results
  *   Halvian.getPatient(id), Halvian.updatePatient(id, changes, source)
  *   Halvian.setAiOffline(bool)
  *   Halvian.logSymptomUpdate({patient_id, symptoms[], pain, duration, red_flag, [free_text, ai_summary, ai_source, red_flag_reason]})  / canSubmitSymptomUpdate(id)
@@ -139,7 +139,7 @@
       time: DEMO_NOW, symptoms: u.symptoms || [], pain: u.pain == null ? null : u.pain,
       duration: u.duration || '', confirmed_by: null, red_flag: !!u.red_flag
     };
-    // Optional fields from the own-words box (sorted by Claude, or by the labelled keyword fallback).
+    // Optional fields from the own-words box (sorted by the AI (Gemini), or by the labelled keyword fallback).
     ['free_text', 'ai_summary', 'ai_source', 'red_flag_reason'].forEach(function (k) { if (u[k]) entry[k] = u[k]; });
     if (entry.red_flag) entry.nurse_paged = true;
     p.symptom_updates.push(entry);
@@ -190,7 +190,7 @@
   };
 
   /* ---------- module registry + tabs ---------- */
-  var TAB_MODULE = { queue: 'ranking', fasttrack: 'fasttrack', capacity: 'capacity', results: 'results', patient: 'patientview' };
+  var TAB_MODULE = { queue: 'ranking', fasttrack: 'fasttrack', capacity: 'capacity', results: 'results' };
   var modules = H.modules = H.modules || {}, mounted = {}, domReady = false;
 
   function containerFor(name) { return document.getElementById('mod-' + name); }
