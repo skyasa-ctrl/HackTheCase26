@@ -30,7 +30,6 @@
     var openWhy = {};     // patient id -> bool
     var pending = null;   // {id, kind:'decline'|'send'}
     var flash = '';
-    var hiOpen = false;
 
     function waiting() {
       return H.state.patients.filter(function (p) { return p.status === 'waiting'; }).sort(H.util.esiArrivalCompare);
@@ -47,11 +46,11 @@
       }).join('') + '<p class="muted">Blue bars (+) push toward "quick case", red bars (−) push away. Values are log-odds; the score is advice only.</p>';
     }
 
-    function rowHtml(p, rank) {
+    function rowHtml(p) {
       var offline = H.state.aiOffline;
       var hi = p.esi <= 2;
       var s = (!hi && !offline && model) ? FT.score(p) : null;
-      var cells = '<td class="num">' + (rank ? '#' + rank : '–') + '</td><td>' + esc(p.id) + '</td><td><span class="badge esi-' + p.esi + '">ESI ' + p.esi + '</span></td>' +
+      var cells = '<td>' + esc(p.id) + '</td><td><span class="badge esi-' + p.esi + '">ESI ' + p.esi + '</span></td>' +
         '<td>' + esc(p.chief_complaint) + '<div class="muted">' + p.age + 'y, waiting ' + Math.max(0, Math.round(H.util.minutesBetween(p.arrival_time, H.util.now()))) + ' min</div></td>';
       var score, actions;
       if (hi) {
@@ -68,8 +67,8 @@
           : '<button class="btn btn-sm" data-act="send" data-id="' + esc(p.id) + '">Send to fast-track anyway (override)</button>';
       }
       var html = '<tr>' + cells + '<td>' + score + '</td><td>' + actions + '</td></tr>';
-      if (s && openWhy[p.id]) html += '<tr><td colspan="6">' + barsHtml(s.contributions) + '</td></tr>';
-      if (pending && pending.id === p.id) html += '<tr><td colspan="6">' + reasonForm(p, s) + '</td></tr>';
+      if (s && openWhy[p.id]) html += '<tr><td colspan="5">' + barsHtml(s.contributions) + '</td></tr>';
+      if (pending && pending.id === p.id) html += '<tr><td colspan="5">' + reasonForm(p, s) + '</td></tr>';
       return html;
     }
 
@@ -129,53 +128,18 @@
         FT.manualCriteria.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ul></div>';
     }
 
-    function tableHtml(rows) {
-      return '<div class="table-wrap"><table class="table"><thead><tr><th>Rank</th><th>ID</th><th>Acuity</th><th>Complaint</th><th>Fast-track score</th><th>Action</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
-    }
-
-    function listHtml() {
-      var list = waiting();
-      if (!list.length) return '<p class="muted">No patients waiting.</p>';
-      var offline = H.state.aiOffline || !model;
-      var hi = list.filter(function (p) { return p.esi <= 2; });
-      var ranked = list.filter(function (p) { return p.esi > 2; });
-      var rows = '', note, i;
-      if (offline) {
-        ranked.sort(function (a, b) { return (b.esi - a.esi) || (new Date(a.arrival_time) - new Date(b.arrival_time)); });
-        note = 'AI offline — ordered by acuity and wait time';
-        rows = ranked.map(function (p, k) { return rowHtml(p, k + 1); }).join('');
-      } else {
-        var sc = {};
-        ranked.forEach(function (p) { sc[p.id] = FT.score(p); });
-        ranked.sort(function (a, b) {
-          return (sc[b.id].probability - sc[a.id].probability) || (new Date(a.arrival_time) - new Date(b.arrival_time));
-        });
-        note = 'Ranked by likelihood of being a quick case (highest first). The nurse decides.';
-        var divided = false, thr = pct(H.state.settings.fasttrackThreshold);
-        var divider = '<tr class="ft-divider"><td colspan="6" style="text-align:center;font-weight:600;border-top:2px dashed currentColor">— Below the ' + thr + '% cutoff —</td></tr>';
-        for (i = 0; i < ranked.length; i++) {
-          if (!divided && !sc[ranked[i].id].eligible) { rows += divider; divided = true; }
-          rows += rowHtml(ranked[i], i + 1);
-        }
-        if (!divided && ranked.length) rows += divider;
-      }
-      var out = '<p class="muted" id="ft-rank-note"><strong>' + esc(note) + '</strong></p>' + (ranked.length ? tableHtml(rows) : '<p class="muted">No rankable patients waiting.</p>');
-      if (hi.length) {
-        out += '<details id="ft-hi"' + (hiOpen ? ' open' : '') + ' style="margin-top:1rem"><summary><strong>High acuity — not eligible (' + hi.length + ')</strong></summary>' +
-          tableHtml(hi.map(function (p) { return rowHtml(p, 0); }).join('')) + '</details>';
-      }
-      return out;
-    }
-
     function render() {
+      var list = waiting();
       var ftNow = H.state.patients.filter(function (p) { return p.status === 'fast-track'; }).length;
+      var body = list.length ? list.map(rowHtml).join('') : '<tr><td colspan="5" class="muted">No patients waiting.</td></tr>';
       el.innerHTML =
         '<div class="grid cols-2"><div>' + (H.state.aiOffline ? manualHtml() : '') +
         '<div class="card"><h2>Waiting patients</h2><p class="muted">Suggestions only. Nothing moves until a nurse clicks. ' + ftNow + ' patient(s) currently in fast-track.</p>' +
         (flash ? '<p class="banner-warning" role="status">' + esc(flash) + '</p>' : '') +
-        '<div id="ft-list">' + listHtml() + '</div></div></div>' +
+        '<div class="table-wrap"><table class="table"><thead><tr><th>ID</th><th>Acuity</th><th>Complaint</th><th>Fast-track score</th><th>Action</th></tr></thead><tbody>' + body + '</tbody></table></div></div></div>' +
         '<div>' + capacityHtml() + thresholdHtml() + modelCardHtml() + '</div></div>';
     }
+
     function decide(id, kind, reason) {
       var p = H.getPatient(id), s = FT.score(p);
       var sug = H.state.aiOffline ? 'AI offline (no suggestion)' : (s.eligible ? 'Fast-track (' + pct(s.probability) + '%)' : 'Not fast-track (' + pct(s.probability) + '%)');
@@ -220,9 +184,7 @@
       H.state.settings.fasttrackThreshold = v;
       H.emit('settings', { key: 'fasttrackThreshold', value: v });
       var lbl = el.querySelector('#ft-thr-val'); if (lbl) lbl.textContent = pct(v) + '%';
-      var lst = el.querySelector('#ft-list'); if (lst) lst.innerHTML = listHtml();
     });
-    el.addEventListener('toggle', function (e) { if (e.target.id === 'ft-hi') hiOpen = e.target.open; }, true);
     el.addEventListener('change', function (e) {
       if (e.target.id === 'ft-role') { role = e.target.value; render(); }
       else if (e.target.id === 'ft-thr') render();

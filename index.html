@@ -14,13 +14,13 @@
     <span class="clock" id="demo-clock"></span>
     <span class="spacer"></span>
     <details class="ai-connect" id="ai-connect">
-      <summary id="ai-status" data-state="none" title="Without a key, simple keyword rules are used instead of AI. In production, the model runs inside Halvian's own cloud under a BAA.">AI: not connected</summary>
+      <summary id="ai-status">AI: not connected (rules fallback)</summary>
       <div class="ai-connect-body" id="ai-key-box">
-        <label for="ai-key">Gemini API key (presenter only)</label>
-        <input type="password" id="ai-key" autocomplete="off" placeholder="AIza...">
-        <div class="row"><button type="button" class="btn btn-sm btn-primary" id="ai-key-use">Connect</button>
+        <label for="ai-key">Anthropic API key (presenter only)</label>
+        <input type="password" id="ai-key" autocomplete="off" placeholder="sk-ant-...">
+        <div class="row"><button type="button" class="btn btn-sm btn-primary" id="ai-key-use">Connect Claude</button>
         <button type="button" class="btn btn-sm" id="ai-key-clear">Disconnect</button></div>
-        <p class="muted">Stays in this page only — never saved.</p>
+        <p class="muted">Kept in this page's memory only. Never saved or committed. Without a key, the demo uses a clearly labelled keyword fallback, not AI. In production, Claude runs inside Halvian's own cloud under a BAA.</p>
       </div>
     </details>
     <label class="switch" for="ai-offline-toggle">
@@ -33,6 +33,7 @@
     <button class="tab" role="tab" id="tab-fasttrack" data-tab="fasttrack" aria-controls="panel-fasttrack" aria-selected="false" tabindex="-1">Fast-track <span class="tab-count" id="count-fasttrack" hidden></span></button>
     <button class="tab" role="tab" id="tab-capacity" data-tab="capacity" aria-controls="panel-capacity" aria-selected="false" tabindex="-1">Capacity <span class="tab-count" id="count-capacity" hidden></span></button>
     <button class="tab" role="tab" id="tab-results" data-tab="results" aria-controls="panel-results" aria-selected="false" tabindex="-1">Results</button>
+    <button class="tab" role="tab" id="tab-patient" data-tab="patient" aria-controls="panel-patient" aria-selected="false" tabindex="-1">Patient view</button>
   </nav>
   </div>
   <div class="banner-warning in-app" id="ai-offline-banner" role="status" hidden>
@@ -45,6 +46,7 @@
     <section role="tabpanel" id="panel-fasttrack" aria-labelledby="tab-fasttrack" hidden><div id="mod-fasttrack"></div></section>
     <section role="tabpanel" id="panel-capacity" aria-labelledby="tab-capacity" hidden><div id="mod-capacity"></div></section>
     <section role="tabpanel" id="panel-results" aria-labelledby="tab-results" hidden><div id="mod-results"></div></section>
+    <section role="tabpanel" id="panel-patient" aria-labelledby="tab-patient" hidden><div id="mod-patientview"></div></section>
   </main>
 
   <noscript><p class="banner-warning">This demo needs JavaScript enabled.</p></noscript>
@@ -59,6 +61,7 @@
   <script src="src/shared/ai.js"></script>
   <script src="src/ranking/ranking.js"></script>
   <script src="src/fasttrack/fasttrack.js"></script>
+  <script src="src/fasttrack/patientview.js"></script>
   <script src="src/capacity/capacity.js"></script>
   <script src="src/results/results.js"></script>
   <script src="src/shared/tabcounts.js"></script>

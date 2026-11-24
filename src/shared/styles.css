@@ -140,11 +140,3 @@ label { font-weight: 600; font-size: .92rem; }
 .rs-egi { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 2rem; margin-bottom: 1rem; padding: .8rem 1rem; background: #f8fafb; border-radius: var(--radius); }
 .rs-egi-note { flex: 1 1 18rem; margin: 0; }
 .rs-wrap .banner-warning { margin-bottom: 1rem; }
-
-/* AI status pill */
-.ai-connect summary#ai-status { display: inline-flex; align-items: center; gap: .45rem; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.6); color: inherit; font-weight: 600; }
-.ai-connect summary#ai-status:hover { background: rgba(255,255,255,.22); }
-.ai-connect summary#ai-status:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-.ai-connect summary#ai-status::before { content: ""; width: .6rem; height: .6rem; border-radius: 50%; background: #aab4be; border: 1px solid rgba(255,255,255,.8); flex: none; }
-.ai-connect summary#ai-status[data-state="api"]::before { background: #3ecf6e; }
-.ai-connect summary#ai-status[data-state="offline"]::before { background: #f5a623; }
