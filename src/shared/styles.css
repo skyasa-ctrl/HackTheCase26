@@ -249,3 +249,6 @@ label { font-weight: 600; font-size: .92rem; }
 .rk-pend-btns{display:flex;flex:0 0 auto;gap:.4rem;align-items:center;margin-left:auto;flex-wrap:nowrap}
 .rk-pend-btns .btn{white-space:nowrap}
 @container (max-width:520px){.rk-pend-btns{flex:1 1 100%;justify-content:flex-end}}
+
+.patient-link { color: #fff; font-size: .9rem; text-decoration: none; padding: .25rem .6rem; border: 1px solid rgba(255,255,255,.5); border-radius: 999px; margin-right: .6rem; }
+.patient-link:hover { background: rgba(255,255,255,.12); }
