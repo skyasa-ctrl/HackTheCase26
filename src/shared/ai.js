@@ -8,12 +8,16 @@
  *      for a patient who says they are thinking of leaving. A nurse must approve it before the
  *      patient sees it.
  *
- * How it connects to Claude (checked in this order):
- *   - Running inside a Claude artifact: uses window.claude.complete (no key needed).
- *   - Otherwise: a presenter pastes an Anthropic API key into the header panel. The key is held in
- *     memory for this page only. It is never saved, logged, or committed.
- *   - Neither available, or "AI offline" switched on: a simple keyword rule set is used instead and
+ * How it connects to Google Gemini:
+ *   - A presenter pastes a Google Gemini API key into the header panel. The key is held in
+ *     memory for this page only. It is never saved, logged, or committed. It is sent in the
+ *     x-goog-api-key request header, never in the URL.
+ *   - No key, or "AI offline" switched on: a simple keyword rule set is used instead and
  *     every screen says "rules fallback, not AI". Nothing pretends to be AI when it isn't.
+ *   - Any Gemini failure (HTTP error, safety block, empty or non-JSON reply) also falls back to
+ *     the rules, and the result carries an .error note.
+ *   - API reference: https://ai.google.dev/api/generate-content  (models.generateContent, v1beta)
+ *     Model: gemini-3.5-flash-lite (stable Flash-Lite tier): https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite
  *
  * Safety rules built in:
  *   - Red flags are OR-ed: if either the AI or the keyword rules see a red flag, a nurse is paged.
@@ -26,7 +30,8 @@
   'use strict';
   var H = (window.Halvian = window.Halvian || {});
   var key = null;                       // memory only
-  var MODEL = 'claude-haiku-5-5';
+  var MODEL = 'gemini-3.5-flash-lite';
+  var ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/' + MODEL + ':generateContent';
 
   var CATEGORY_LABELS = {
     chest_cardiac: 'Chest or heart symptoms', respiratory: 'Breathing symptoms', neuro: 'Neurological symptoms',
@@ -65,34 +70,38 @@
 
   function mode() {
     if (H.state && H.state.aiOffline) return 'offline';
-    if (window.claude && typeof window.claude.complete === 'function') return 'artifact';
     if (key) return 'api';
     return 'none';
   }
 
   function label() {
     var m = mode();
-    return m === 'artifact' ? 'AI: Claude connected' : m === 'api' ? 'AI: Claude connected (API key)' :
-      m === 'offline' ? 'AI: offline (switched off)' : 'AI: not connected (rules fallback)';
+    return m === 'api' ? 'AI: connected (Gemini)' :
+      m === 'offline' ? 'AI: offline' : 'AI: not connected';
   }
 
-  function complete(prompt) {
-    var m = mode();
-    if (m === 'artifact') return Promise.resolve(window.claude.complete(prompt));
-    if (m === 'api') {
-      return fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
-        body: JSON.stringify({ model: MODEL, max_tokens: 700, messages: [{ role: 'user', content: prompt }] })
-      }).then(function (r) {
-        if (!r.ok) return r.text().then(function (t) { throw new Error('Claude API ' + r.status + ': ' + t.slice(0, 160)); });
-        return r.json();
-      }).then(function (j) { return (j.content || []).map(function (c) { return c.text || ''; }).join(''); });
-    }
-    return Promise.reject(new Error(m === 'offline' ? 'AI is switched off' : 'AI not connected'));
+  /* Gemini generateContent. Key goes in a header so it never appears in a URL or log.
+   * json=true asks for application/json output (generationConfig.responseMimeType). */
+  function complete(prompt, json) {
+    if (mode() !== 'api') return Promise.reject(new Error(mode() === 'offline' ? 'AI is switched off' : 'AI not connected'));
+    var gen = { maxOutputTokens: 1024 };
+    if (json) gen.responseMimeType = 'application/json';
+    return fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: gen })
+    }).then(function (r) {
+      if (!r.ok) return r.text().then(function (t) { throw new Error('Gemini API ' + r.status + ': ' + t.replace(key, '[key]').slice(0, 160)); });
+      return r.json();
+    }).then(function (j) {
+      if (j && j.promptFeedback && j.promptFeedback.blockReason) throw new Error('Gemini blocked the request (' + j.promptFeedback.blockReason + ')');
+      var c = j && j.candidates && j.candidates[0];
+      if (!c) throw new Error('Gemini returned no candidates');
+      var text = ((c.content && c.content.parts) || []).map(function (x) { return x.text || ''; }).join('').trim();
+      if (!text) throw new Error('Gemini returned an empty reply' + (c.finishReason ? ' (' + c.finishReason + ')' : ''));
+      if (c.finishReason === 'SAFETY') throw new Error('Gemini blocked the reply (SAFETY)');
+      return text;
+    });
   }
 
   function parseJson(text) {
@@ -129,7 +138,7 @@
       '- "red_flag_reason": short phrase, or ""\n' +
       '- "nurse_summary": one plain English sentence (max 25 words) for the nurse; no diagnosis\n' +
       '- "patient_reply": one or two calm sentences to the patient in ' + (lang === 'es' ? 'Spanish' : 'English') + ': acknowledge, say a nurse will review, and if red_flag say a nurse is coming now. No diagnosis, no wait-time promises.';
-    return complete(prompt).then(function (txt) {
+    return complete(prompt, true).then(function (txt) {
       var j = parseJson(txt);
       var cat = CATEGORY_LABELS[j.category] ? j.category : rules.category;
       var res = {
@@ -137,9 +146,9 @@
         red_flag_reason: j.red_flag_reason || (rules.red_flag ? 'Keyword safety net' : ''),
         nurse_summary: String(j.nurse_summary || rules.nurse_summary).slice(0, 220),
         patient_reply: String(j.patient_reply || rules.patient_reply).slice(0, 300),
-        source: 'claude'
+        source: 'gemini'
       };
-      log('triage', 'claude', true);
+      log('triage', 'gemini', true);
       return res;
     }).catch(function (err) {
       log('triage', 'rules', false, err.message);
@@ -165,8 +174,8 @@
       '(1) where to get care today instead, (2) warning signs specific to this complaint that mean return or call 911, (3) follow-up. ' +
       'Encourage them to stay if they can. No diagnosis. Plain text only.';
     return complete(prompt).then(function (txt) {
-      log('leavePlan', 'claude', true);
-      return { text: String(txt).trim().slice(0, 900), source: 'claude' };
+      log('leavePlan', 'gemini', true);
+      return { text: String(txt).trim().slice(0, 900), source: 'gemini' };
     }).catch(function (err) {
       log('leavePlan', 'template', false, err.message);
       fallback.error = err.message;
@@ -176,12 +185,11 @@
 
   /* ---------- header connect panel ---------- */
   function initPanel() {
-    var status = document.getElementById('ai-status'), box = document.getElementById('ai-key-box');
+    var status = document.getElementById('ai-status');
     var input = document.getElementById('ai-key'), use = document.getElementById('ai-key-use'), clear = document.getElementById('ai-key-clear');
     function paint() {
-      if (status) status.textContent = label();
-      if (box) box.hidden = mode() === 'artifact';
-    }
+      if (status) { status.textContent = label(); status.setAttribute('data-state', mode()); }
+          }
     if (use) use.addEventListener('click', function () {
       var k = (input && input.value || '').trim();
       if (!k) { if (input) input.focus(); return; }

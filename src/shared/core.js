@@ -139,7 +139,7 @@
       time: DEMO_NOW, symptoms: u.symptoms || [], pain: u.pain == null ? null : u.pain,
       duration: u.duration || '', confirmed_by: null, red_flag: !!u.red_flag
     };
-    // Optional fields from the own-words box (sorted by Claude, or by the labelled keyword fallback).
+    // Optional fields from the own-words box (sorted by the AI (Gemini), or by the labelled keyword fallback).
     ['free_text', 'ai_summary', 'ai_source', 'red_flag_reason'].forEach(function (k) { if (u[k]) entry[k] = u[k]; });
     if (entry.red_flag) entry.nurse_paged = true;
     p.symptom_updates.push(entry);

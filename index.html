@@ -14,13 +14,13 @@
     <span class="clock" id="demo-clock"></span>
     <span class="spacer"></span>
     <details class="ai-connect" id="ai-connect">
-      <summary id="ai-status">AI: not connected (rules fallback)</summary>
+      <summary id="ai-status" data-state="none" title="Without a key, simple keyword rules are used instead of AI. In production, the model runs inside Halvian's own cloud under a BAA.">AI: not connected</summary>
       <div class="ai-connect-body" id="ai-key-box">
-        <label for="ai-key">Anthropic API key (presenter only)</label>
-        <input type="password" id="ai-key" autocomplete="off" placeholder="sk-ant-...">
-        <div class="row"><button type="button" class="btn btn-sm btn-primary" id="ai-key-use">Connect Claude</button>
+        <label for="ai-key">Gemini API key (presenter only)</label>
+        <input type="password" id="ai-key" autocomplete="off" placeholder="AIza...">
+        <div class="row"><button type="button" class="btn btn-sm btn-primary" id="ai-key-use">Connect</button>
         <button type="button" class="btn btn-sm" id="ai-key-clear">Disconnect</button></div>
-        <p class="muted">Kept in this page's memory only. Never saved or committed. Without a key, the demo uses a clearly labelled keyword fallback, not AI. In production, Claude runs inside Halvian's own cloud under a BAA.</p>
+        <p class="muted">Stays in this page only — never saved.</p>
       </div>
     </details>
     <label class="switch" for="ai-offline-toggle">
