@@ -22,6 +22,12 @@
     { key: 'symMild', label: 'Symptom update: mild', desc: 'Minor injury, skin problem, minor infection, or something else.', def: 2, max: 10, step: 0.5, unit: 'pts for a mild, nurse-confirmed update' },
     { key: 'painCap', label: 'Pain-only limit', desc: 'Most points a pain-only update can add.', def: 3, max: 10, step: 0.5, unit: 'maximum pts when an update is pain-only' }
   ];
+  var WGROUPS = [
+    { title: 'Waiting time', keys: ['wait', 'starve', 'recheck'] },
+    { title: 'Patient condition', keys: ['vitals', 'concern'] },
+    { title: 'New symptoms reported', keys: ['symSevere', 'symptom', 'symMild', 'painCap'] }
+  ];
+  var SHORT = { symSevere: 'Severe', symptom: 'Moderate', symMild: 'Mild', painCap: 'Pain only (max)' };
   var TIPS = {
     wait: "Target waits: ESI 2: 10 min, ESI 3: 30, ESI 4: 60, ESI 5: 120. Example: ESI 4 waiting 90 min = 30 min over = 3 points at the default.",
     starve: "Applies when someone has waited longer than the current average for patients at the same acuity, so nobody keeps getting passed over.",
@@ -188,10 +194,6 @@
       '.rk-form{margin-top:.5rem;padding:.6rem;background:var(--brand-tint);border-radius:var(--radius);display:flex;flex-wrap:wrap;gap:.5rem .8rem;align-items:flex-end}' +
       '.rk-form .fld{display:flex;flex-direction:column;gap:.2rem}' +
       '.rk-pending{margin-top:.5rem;padding:.5rem .6rem;background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:var(--radius)}' +
-      '.rk-weights{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem 1.2rem;margin-top:.7rem}' +
-      '.rk-weights .w{display:flex;flex-direction:column;gap:.15rem}.rk-weights input[type=range]{padding:0;min-height:28px;width:100%}' +
-      '.rk-wsave{display:flex;flex-direction:column;gap:.4rem;margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--line);max-width:40rem}' +
-      '.rk-weights .w .d{font-size:.85rem}.rk-weights .wh{display:flex;justify-content:space-between;align-items:baseline;gap:.4rem}.rk-weights .wv{color:var(--brand-dark)}' +
       '.rk-info{cursor:help;color:var(--brand);font-weight:700;border-radius:50%;padding:0 .2rem}' +
       '.rk-gap{background:var(--warn-bg);color:var(--warn-ink);border:1px solid var(--warn-line);border-radius:var(--radius);padding:.5rem .8rem;margin:.6rem 0;font-weight:500}' +
       '.rk-summary{cursor:pointer;font-weight:700;font-size:1.05rem}' +
@@ -214,11 +216,11 @@
       '<div id="rk-offline"></div>' +
       '<div class="card"><details id="rk-weights-box"><summary class="rk-summary">Scoring weights<br><span class="muted" style="font-weight:500">Adjust how much each factor matters, based on your experience on the floor.</span></summary>' +
       '<div class="rk-weights" id="rk-weights"></div>' +
-      '<div class="rk-wsave"><label for="rk-w-reason">Why are you changing this? (optional)</label>' +
-      '<input id="rk-w-reason" type="text" maxlength="200" placeholder="e.g. Nights are seeing slow re-checks">' +
-      '<div class="row"><button type="button" class="btn btn-sm btn-primary" id="rk-w-save">Save change</button>' +
+      '<div class="rk-wsave"><div class="rk-wreason"><label for="rk-w-reason">Why are you changing this? (optional)</label>' +
+      '<input id="rk-w-reason" type="text" maxlength="200" placeholder="e.g. Nights are seeing slow re-checks"></div>' +
+      '<div class="rk-wbtns"><button type="button" class="btn btn-sm btn-primary" id="rk-w-save">Save change</button>' +
       '<button type="button" class="btn btn-sm" id="rk-reset">Reset weights to defaults</button></div>' +
-      '<p class="muted" id="rk-w-last" role="status" aria-live="polite"></p></div></details></div>' +
+      '<p class="muted rk-wlast" id="rk-w-last" role="status" aria-live="polite"></p></div></details></div>' +
       '<div class="rk-grid"><div>' +
       '<div class="card"><h2>Ranked waiting list</h2><div id="rk-msg" class="sr-only" aria-live="polite"></div><div id="rk-list"></div></div>' +
       '</div><div>' +
@@ -231,12 +233,18 @@
   function levelWord(c, v) { return FMT[c.key](v); }
   function buildWeights() {
     var box = root.querySelector('#rk-weights'), html = '';
-    COMPONENTS.forEach(function (c) {
-      html += '<div class="w"><div class="wh"><label for="rk-w-' + c.key + '">' + esc(c.label) + ': <span class="wv" id="rk-wv-' + c.key + '">' + levelWord(c, weights[c.key]) + '</span></label>' +
-        '<span class="rk-info" tabindex="0" role="img" aria-label="' + esc(TIPS[c.key]) + '" title="' + esc(TIPS[c.key]) + '">ⓘ</span></div>' +
-        '<div class="wslider"><span class="wbubble" id="rk-wb-' + c.key + '" aria-hidden="true"></span>' +
-        '<input type="range" id="rk-w-' + c.key + '" data-w="' + c.key + '" min="0" max="' + c.max + '" step="' + c.step + '" value="' + weights[c.key] + '" aria-describedby="rk-wd-' + c.key + '" aria-valuetext="' + esc(FMT[c.key](weights[c.key])) + '"></div>' +
-        '<span class="muted d" id="rk-wd-' + c.key + '">' + esc(c.desc) + '</span></div>';
+    WGROUPS.forEach(function (g) {
+      html += '<div class="rk-wgroup" role="group" aria-labelledby="rk-wg-' + g.keys[0] + '"><h3 class="rk-wgroup-h" id="rk-wg-' + g.keys[0] + '">' + esc(g.title) + '</h3>';
+      g.keys.forEach(function (k) {
+        var c = COMPONENTS.filter(function (x) { return x.key === k; })[0];
+        var tip = c.desc + ' ' + TIPS[k], lbl = SHORT[k] || c.label;
+        html += '<div class="rk-wrow"><span class="rk-wlabel"><label for="rk-w-' + k + '">' + esc(lbl) + '</label>' +
+          '<span class="rk-info" tabindex="0" role="img" aria-label="' + esc(tip) + '" title="' + esc(tip) + '">ⓘ</span></span>' +
+          '<div class="wslider"><span class="wbubble" id="rk-wb-' + k + '" aria-hidden="true"></span>' +
+          '<input type="range" id="rk-w-' + k + '" data-w="' + k + '" min="0" max="' + c.max + '" step="' + c.step + '" value="' + weights[k] + '" aria-valuetext="' + esc(FMT[k](weights[k])) + '"></div>' +
+          '<span class="wv" id="rk-wv-' + k + '">' + levelWord(c, weights[k]) + '</span></div>';
+      });
+      html += '</div>';
     });
     box.innerHTML = html;
   }
@@ -253,7 +261,7 @@
     reasonEl.value = '';
     H.logOverride({ module: 'ranking', patient_id: null, ai_suggestion: 'Previous scoring weights: ' + olds.join(', '),
       nurse_decision: 'Scoring weights changed: ' + diffs.join('; '), reason: reason || 'No reason given (weights set by nurse)', nurse: nurse });
-    note.textContent = 'Last changed by ' + nurse + ' at ' + lastWeightChange.time + (reason ? ' — reason: ' + reason : ' — no reason given');
+    note.textContent = 'Last changed ' + lastWeightChange.time + ' by ' + nurse;
   }
 
   var assessed = [], lastAlertHtml = null;
@@ -369,7 +377,7 @@
         (u.pain != null ? ', pain ' + esc(u.pain) + '/10' : '') + (u.duration ? ', ' + esc(u.duration) : '') +
         (u.ai_summary ? '<br><span class="ai-source"><strong>' + (u.ai_source && u.ai_source !== 'rules' ? 'AI summary (' + H.ai.sourceName(u.ai_source) + ')' : 'Keyword fallback, not AI') + ':</strong> ' + esc(u.ai_summary) + '</span>' +
           (u.free_text ? '<br><span class="muted ai-source">Patient\'s words: "' + esc(u.free_text) + '"</span>' : '') + '<br>' : '') +
-        ' <span class="muted">(no points until confirmed)</span> ' +
+        ' ' +
         '<button type="button" class="btn btn-sm btn-primary" data-act="confirm" data-id="' + esc(p.id) + '" data-i="' + x.i + '">Confirm</button> ' +
         '<button type="button" class="btn btn-sm" data-act="dismiss" data-id="' + esc(p.id) + '" data-i="' + x.i + '">Dismiss</button></div>';
     });
@@ -409,7 +417,7 @@
       '<span class="rk-rank" aria-label="Rank ' + r.rank + '">#' + r.rank + '</span>' +
       '<span class="badge esi-' + esc(p.esi) + '">ESI ' + esc(p.esi) + '</span>' +
       '<div class="rk-main"><strong>' + id + '</strong> · ' + esc(p.age) + esc(p.sex) + ' · ' + esc(p.chief_complaint) +
-      '<div class="muted">Waiting ' + waitMin(p) + ' min (arrived ' + U.fmtTime(p.arrival_time) + ')' + badges(r) + '</div></div>' +
+      '<div class="muted">Waiting ' + waitMin(p) + ' min' + badges(r) + '</div></div>' +
       (offline ? '' : '<span class="rk-score" title="Points within ESI ' + esc(p.esi) + '">' + r.s.total + ' pts</span>') +
       '<div class="rk-actions">' +
       (offline ? '' : '<button type="button" class="btn btn-sm" data-act="why" data-id="' + id + '" aria-expanded="' + open + '">' + (open ? 'Hide reasoning' : 'Show reasoning') + '</button>' +
@@ -431,8 +439,7 @@
     q.ranked.forEach(function (r, i) {
       var prev = q.ranked[i - 1], next = q.ranked[i + 1], e = r.p.esi;
       if (e !== lastEsi) {
-        html += '<h3 class="rk-esi-h esi-' + esc(e) + '"><span class="t">ESI ' + esc(e) + ' · ' + LVL[e] + '</span><span class="m">' + cnt[e] + ' waiting · target wait ' +
-          (TARGET[e] ? TARGET[e] + ' min' : 'immediate') + '</span></h3>';
+        html += '<h3 class="rk-esi-h esi-' + esc(e) + '"><span class="t">ESI ' + esc(e) + ' · ' + LVL[e] + '</span><span class="m">' + cnt[e] + ' waiting</span></h3>';
         lastEsi = e;
       }
       html += rowHtml(r, { first: !prev || prev.p.esi !== r.p.esi, last: !next || next.p.esi !== r.p.esi });
@@ -451,7 +458,7 @@
     var h = items.length ? '<div class="table-wrap"><table class="table"><thead><tr><th>Time</th><th>Patient</th><th>Decision</th><th>Reason</th></tr></thead><tbody>' : '<p class="muted">No overrides logged yet.</p>';
     items.forEach(function (o) {
       h += '<tr><td>' + esc(U.fmtTime(o.time)) + '</td><td>' + esc(o.patient_id) + '</td><td>' + (o.module === 'fasttrack' ? 'Fast-track: ' : '') + esc(o.nurse_decision) +
-        '<div class="muted">AI: ' + esc(o.ai_suggestion) + '</div></td><td>' + esc(o.reason) + '<div class="muted">' + esc(o.nurse) + '</div></td></tr>';
+        '</td><td>' + esc(o.reason) + '<div class="muted">' + esc(o.nurse) + '</div></td></tr>';
     });
     if (items.length) h += '</tbody></table></div>';
     root.querySelector('#rk-log').innerHTML = h;
@@ -627,7 +634,7 @@
       ['pointerdown', 'focusin'].forEach(function (n) { el.addEventListener(n, onBubbleEvt); });
       ['pointerup', 'pointercancel', 'focusout', 'change'].forEach(function (n) { el.addEventListener(n, onBubbleEvt); });
       document.addEventListener('pointerup', function () { root.querySelectorAll('.wbubble.show').forEach(function (b) { hideBubbleSoon(root.querySelector('#rk-w-' + b.id.slice(6))); }); });
-      if (lastWeightChange) root.querySelector('#rk-w-last').textContent = 'Last changed by ' + lastWeightChange.nurse + ' at ' + lastWeightChange.time + ' — reason: ' + lastWeightChange.reason;
+      if (lastWeightChange) root.querySelector('#rk-w-last').textContent = 'Last changed ' + lastWeightChange.time + ' by ' + lastWeightChange.nurse;
       root.querySelector('#rk-w-save').addEventListener('click', saveWeights);
       root.querySelector('#rk-reset').addEventListener('click', function () {
         COMPONENTS.forEach(function (c) { weights[c.key] = c.def; });

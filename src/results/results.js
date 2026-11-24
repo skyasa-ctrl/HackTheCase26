@@ -64,8 +64,8 @@
   var ACTIONS = {
     d2p: 'Review fast-track use and room-status updates; add fast-track APP hours at Monday peaks.',
     lwbs: 'Check "thinking of leaving" alerts and patient-link uptake; add a waiting-room nurse round on surge days.',
-    unins_wait_gap: 'Audit scores and overrides for uninsured patients; add kiosk staffing and nurse rounding for this group.',
-    medicaid_wait_gap: 'Audit scores and overrides for Medicaid patients; expand nurse rounding and Spanish kiosk support before the next shift expansion.',
+    unins_wait_gap: 'Audit scores and overrides for uninsured patients; add nurse rounding for this group.',
+    medicaid_wait_gap: 'Audit scores and overrides for Medicaid patients; expand nurse rounding and Spanish-speaking staff support before the next shift expansion.',
     unins_lwbs: 'Target "thinking of leaving" outreach to uninsured patients; check link uptake by language and add a nurse round.',
     medicaid_lwbs: 'Target "thinking of leaving" outreach to Medicaid patients; check link uptake by language and add a nurse round.'
   };
@@ -83,9 +83,8 @@
     var latest = k.series[k.series.length - 1], d = latest - k.baseline, st = status(k);
     var badge = '<span class="pill ' + STATUS_PILL[st.level] + '" style="margin-left:.4rem;font-size:.78rem">' + (st.level === 'green' ? '● ' : '▲ ') + STATUS_TEXT[st.level] + '</span>';
     var action = st.level === 'green' ? '' :
-      '<div class="banner-warning" role="note" style="margin-top:.5rem;padding:.45rem .6rem;font-size:.88rem"><strong>' +
-      (st.level === 'red' ? 'Red: pause the feature involved and review. ' : 'Amber: committee finds the cause within 1 week. ') +
-      '</strong>Action: ' + esc(ACTIONS[key] || 'Review with the nurse committee.') + '</div>';
+      '<div class="banner-warning" role="note" style="margin-top:.5rem;padding:.45rem .6rem;font-size:.88rem">' +
+      'Action: ' + esc(ACTIONS[key] || 'Review with the nurse committee.') + '</div>';
     return '<div class="rs-kpi"><h3>' + esc(k.label) + badge + '</h3>' +
       '<div class="rs-kpi-main"><div class="rs-big">' + val(k, latest) + '</div>' + spark(k.series, k.target, 120, 40, k.label + ', Month 0 to 6 trend, target dashed') + '</div>' +
       '<dl class="rs-dl"><div><dt>Baseline</dt><dd>' + val(k, k.baseline) + '</dd></div><div><dt>Latest (Month 6)</dt><dd>' + valFine(k, latest) + '</dd></div>' +
@@ -102,22 +101,20 @@
     var counts = { green: 0, amber: 0, red: 0 };
     keys.forEach(function (key) { if (k[key]) counts[status(k[key]).level]++; });
     var h = '<div class="card"><h2>Month-6 check: ' + counts.green + ' on track, ' + counts.amber + ' behind path' + (counts.red ? ', ' + counts.red + ' off track' : '') + '</h2>' +
-      '<p class="muted" style="margin:0">Each goal is compared with a straight-line path from baseline to its Month-18 target. ' +
-      '<span class="pill ok">● On track</span> on or ahead of the path · <span class="pill warn">▲ Behind path</span> the committee finds the cause within a week and acts · ' +
-      '<span class="pill danger">▲ Off track</span> no better than baseline: pause the feature involved (Roadmap §2.1, Risk §4.3).</p></div>';
-    h += '<div class="card"><h2>Headline progress</h2><p class="muted">Month 0 is today’s baseline from the case. Targets are the draft Month-18 goals.</p>' +
+      '<p class="muted" style="margin:0"><span class="pill ok">● On track</span> · <span class="pill warn">▲ Behind path</span> · ' +
+      '<span class="pill danger">▲ Off track</span></p></div>';
+    h += '<div class="card"><h2>Headline progress</h2>' +
       '<div class="rs-grid">' + kpiCard(k.d2p, '', 'd2p') + kpiCard(k.lwbs, '', 'lwbs') + '</div></div>';
     h += '<div class="card"><h2>Equity: gaps vs commercial patients</h2>' +
       '<p class="muted">Insurance is never used in scoring — shown only to measure gaps between groups.</p>' +
       '<div class="rs-egi"><div><div class="muted">Equity Gap Index (EGI)</div><div class="rs-big">' + fmt(cur, 0) + '</div>' +
       '<p class="rs-change ' + (cur < 100 ? 'good' : 'bad') + '">' + (cur < 100 ? 'Gaps shrinking' : cur > 100 ? 'Gaps widening' : 'Unchanged') + ' (' + (cur < 100 ? 'improved' : cur > 100 ? 'worse' : 'same') + ' vs 100 today)</p></div>' +
       spark(series, tgt, 300, 70, 'Equity Gap Index, Month 0 to 6, target dashed') +
-      '<p class="muted rs-egi-note">EGI = average of (current gap ÷ baseline gap) across the four gaps below × 100. 100 = today, below 100 = gaps shrinking, above 100 = widening. Month 0: 100 · Month 6: ' + fmt(cur, 0) +
-      ' · Month-18 target: about ' + fmt(tgt, 0) + '.</p></div>' +
+      '<p class="muted rs-egi-note">100 = today · lower = gaps shrinking · target ≈ ' + fmt(tgt, 0) + '</p></div>' +
       '<div class="rs-grid">' +
       kpiCard(k.unins_wait_gap, '', 'unins_wait_gap') + kpiCard(k.medicaid_wait_gap, '', 'medicaid_wait_gap') +
-      kpiCard(k.unins_lwbs, '<p class="muted">Gap vs commercial ' + fmt(r.commercial_lwbs, 1) + '%: ' + fmt(k.unins_lwbs.series[last] - r.commercial_lwbs, 1) + ' pts (baseline ' + fmt(gaps.ul[0], 1) + ' pts).</p>', 'unins_lwbs') +
-      kpiCard(k.medicaid_lwbs, '<p class="muted">Gap vs commercial ' + fmt(r.commercial_lwbs, 1) + '%: ' + fmt(k.medicaid_lwbs.series[last] - r.commercial_lwbs, 1) + ' pts (baseline ' + fmt(gaps.ml[0], 1) + ' pts).</p>', 'medicaid_lwbs') +
+      kpiCard(k.unins_lwbs, '', 'unins_lwbs') +
+      kpiCard(k.medicaid_lwbs, '', 'medicaid_lwbs') +
       '</div></div>';
     return h;
   }
@@ -142,12 +139,10 @@
       (m.auc_esi_3_5 != null ? '<tr><td>AUC, ESI 3–5 only (stricter; synthetic data)</td><td class="num">' + m.auc_esi_3_5.toFixed(3) + '</td></tr>' : '') +
       '<tr><td>Real-world benchmark (published)</td><td class="num">0.87</td></tr>' +
       '<tr><td>Training patients (n_train)</td><td class="num">' + m.n_train + '</td></tr></tbody></table></div>' +
-      '<p class="banner-warning" style="margin-top:.6rem"><strong>Read with care:</strong> synthetic labels are cleaner than real triage data, so these numbers overstate real-world accuracy. ' +
-      'Go-live bar in silent mode: AUC of at least 0.85 on Halvian\'s own data and bounce-back under 5%.</p>' +
-      '<h3 style="margin-top:1rem">Fairness by insurance group</h3><p class="muted"><strong>Insurance is not a model input.</strong> It is used only here, to check the model is fair.</p>' +
+      '<p class="banner-warning" style="margin-top:.6rem">Synthetic data overstates accuracy; go-live needs AUC ≥ 0.85 on real data.</p>' +
+      '<h3 style="margin-top:1rem">Fairness by insurance group</h3>' +
       '<div class="table-wrap"><table class="table"><thead><tr><th>Group</th><th class="num">n</th><th class="num">Selection rate</th><th class="num">Bounce-back</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
-      '<p>In this synthetic test, uninsured (' + f1(fair.uninsured.selection_rate) + ') and Medicaid (' + f1(fair.medicaid.selection_rate) + ') patients are selected for fast-track at least as often as commercial patients (' + f1(fair.commercial.selection_rate) + '), with similar bounce-back. ' +
-      'This is a hypothesis to confirm on real Halvian data in silent mode, not proof.</p></div>';
+      '<p>Uninsured and Medicaid patients are selected at least as often as commercial (to confirm on real data).</p></div>';
   }
 
   function sectionBoarding() {
@@ -157,8 +152,8 @@
       '<div class="rs-kpi"><div class="muted">Estimated cost</div><div class="rs-big">$' + s.boardingCost.toLocaleString('en-US') + '</div></div>' +
       '<div class="rs-kpi"><div class="muted">ED rooms boarding</div><div class="rs-big">' + s.boardingEd + '</div></div>' +
       '<div class="rs-kpi"><div class="muted">Bed-hours lost so far today</div><div class="rs-big">' + s.boardingBedHours.toFixed(1) + '</div></div></div>' +
-      '<p class="muted" style="margin:.7rem 0 0">' + s.boardingEd + ' ED rooms boarding, ' + s.boardingBedHours.toFixed(1) + ' bed-hours so far today × $' + s.costPerEdBedHour +
-      ' per ED bed-hour (case figure) = about ' + s.boardingBedHours.toFixed(1) + ' hours of ED capacity lost today. Median boarding is 3.5 h at Halvian vs 2–2.5 h nationally.</p></div>';
+      '<p class="muted" style="margin:.7rem 0 0">' + s.boardingBedHours.toFixed(1) + ' bed-hours × $' + s.costPerEdBedHour + ' = $' +
+      Math.round(s.boardingBedHours * s.costPerEdBedHour).toLocaleString('en-US') + ' today</p></div>';
   }
 
   function sectionLive() {
@@ -181,8 +176,7 @@
         '<td class="num">' + (hr.length ? (100 * lw / hr.length).toFixed(1) + '%' : '—') + '</td><td class="num">' + ov + '</td></tr>';
     });
     return '<div class="card"><h2>Today: live demo queue by insurance group <span class="pill">Live demo data</span></h2>' +
-      '<p class="muted">Insurance is never used in scoring — shown only to measure gaps. Small groups give noisy live numbers; the historical columns (' + hist.length +
-      ' past visits) are steadier. “Same-ESI” compares each group’s historical door-to-provider with the average for the same acuity level.</p>' +
+      '<p class="muted">“Same-ESI” compares each group’s historical door-to-provider with the average for the same acuity level.</p>' +
       '<div class="table-wrap"><table class="table"><thead><tr><th>Insurance group</th><th class="num">Waiting now</th><th class="num">Median current wait (min)</th>' +
       '<th class="num">Hist. median door-to-provider (min)</th><th class="num">Hist. wait vs same-ESI average (min)</th><th class="num">Hist. LWBS %</th><th class="num">Overrides logged</th></tr></thead><tbody>' +
       rows + '</tbody></table></div></div>';

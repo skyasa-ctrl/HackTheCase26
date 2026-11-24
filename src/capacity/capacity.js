@@ -108,7 +108,6 @@
       '<div id="cap-cards" class="grid cols-3"></div>' +
       '<div class="card"><h2>Room board</h2>' +
       '<div class="row muted" id="cap-legend" aria-label="Legend"></div>' +
-      '<p class="muted">Select a room tile to move it to the next status (open, occupied, cleaning, open). Use the form below to set boarding or any specific status.</p>' +
       '<div id="cap-board"></div>' +
       '<form id="cap-set" class="row" style="margin-top:.75rem"><label for="cap-room">Set room</label><select id="cap-room"></select>' +
       '<label for="cap-status">to</label><select id="cap-status"></select>' +
@@ -201,7 +200,7 @@
       body.innerHTML = '<div class="table-wrap"><table class="table"><thead><tr><th>Acuity</th><th>Estimated wait</th><th class="num">Waiting ahead</th>' +
         '<th class="num">Open rooms</th><th>With what-if</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
       var ed = s.byType.ed.open;
-      out.textContent = whatIf === 0 ? 'Move the slider to see how freeing boarded ED rooms changes waits. Today ' + s.boardingEd + ' ED rooms are held by boarding patients.' :
+      out.textContent = whatIf === 0 ? s.boardingEd + ' ED rooms held by boarding patients' :
         'Moving ' + whatIf + ' boarding ' + (whatIf === 1 ? 'patient' : 'patients') + ' upstairs would open ' + whatIf + ' ED ' + (whatIf === 1 ? 'room' : 'rooms') +
         ' (' + ed + ' to ' + (ed + whatIf) + ' open) and recover about ' + (whatIf * 3.5).toFixed(1) + ' h of ED capacity per typical boarding stay. ESI 3 estimate: ' +
         rangeFor(3, 0).low + '&ndash;' + rangeFor(3, 0).high + ' min becomes ' + rangeFor(3, whatIf).low + '&ndash;' + rangeFor(3, whatIf).high + ' min.';

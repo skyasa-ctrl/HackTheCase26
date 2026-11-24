@@ -87,8 +87,8 @@
         '<div class="muted">' + p.age + ' y · waiting ' + waitMin(p) + ' min' + prefText(p) + '</div></div>';
       var score = '', main = '', more = '';
       if (hi) {
-        score = '<span class="muted">High acuity: never eligible for fast-track.</span>';
-        main = '<span class="muted">No fast-track option</span>';
+        score = '';
+        main = '';
       } else if (offline || !s) {
         score = '<span class="muted">AI offline: see manual criteria</span>';
         main = '<button class="btn btn-sm btn-primary" data-act="send" data-id="' + id + '">Send to fast-track (manual)</button>';
@@ -106,7 +106,7 @@
         }
         more += '<button class="btn btn-ghost btn-sm" data-act="why" data-id="' + id + '" aria-expanded="' + !!openWhy[p.id] + '">' + (openWhy[p.id] ? 'Hide why' : 'Why?') + '</button>';
       }
-      var html = '<div class="ft-row"><div class="ft-info">' + info + '</div><div class="ft-score">' + score + '</div>' +
+      var html = '<div class="ft-row" id="ftrow-' + id + '"><div class="ft-info">' + info + '</div><div class="ft-score">' + score + '</div>' +
         '<div class="ft-actions">' + main + (more ? '<div class="ft-more">' + more + '</div>' : '') + '</div>';
       if (s && openWhy[p.id]) html += '<div class="ft-extra">' + barsHtml(s.contributions) + '</div>';
       if (pending && pending.id === p.id) html += '<div class="ft-extra">' + reasonForm(p, s) + '</div>';
@@ -131,37 +131,47 @@
     }
 
     /* Right-hand panel: suggestions generated from the fast-track model's scores plus live room status. Advice only. */
+    var sgOpen = {};      // section key -> bool (undefined = open)
+    function sgSection(key, title, count, hint, body) {
+      return '<details class="sg-sec" data-sg="' + key + '"' + (sgOpen[key] === false ? '' : ' open') + '><summary><span class="sg-h">' + title +
+        '</span><span class="sg-count">' + count + '</span></summary>' + (hint ? '<p class="sg-hint">' + hint + '</p>' : '') + body + '</details>';
+    }
+    function sgRow(lead, p, meta, btn) {
+      return '<div class="sg-row">' + (lead ? '<span class="sg-n" aria-hidden="true">' + lead + '</span>' : '') +
+        '<div class="sg-who"><strong class="ft-id">' + esc(p.id) + '</strong> <span class="badge esi-' + p.esi + '">ESI ' + p.esi + '</span></div>' +
+        '<div class="sg-what"><div class="ft-complaint">' + esc(cap(p.chief_complaint)) + '</div><div class="muted">' + meta + '</div></div>' +
+        '<div class="sg-act">' + btn + '</div></div>';
+    }
     function suggestionsHtml() {
-      if (H.state.aiOffline || !model) return '<div class="card"><h2>AI suggestions</h2><p class="muted">AI is offline, so there are no suggestions. Use the manual criteria.</p></div>';
+      var head = '<h2>AI suggestions</h2><p class="sg-sub">Suggestions only — a nurse decides</p>';
+      if (H.state.aiOffline || !model) return '<div class="card sg-card">' + head + '<p class="muted">AI is offline, so there are no suggestions. Use the manual criteria.</p></div>';
       var r = rankCandidates(waiting()), sc = r.scores, c = FT.roomCounts(), thr = H.state.settings.fasttrackThreshold;
       var elig = r.list.filter(function (p) { return sc[p.id].eligible; });
       var next = elig.slice(0, Math.max(1, Math.min(3, c.open)));
+      var nextIds = {}; next.forEach(function (p, i) { nextIds[p.id] = i + 1; });
       var video = elig.filter(function (p) { return p.consult_pref === 'virtual' && p.esi >= 4; });
       var near = r.list.filter(function (p) { var pr = sc[p.id].probability; return !sc[p.id].eligible && pr >= thr - 0.10; });
-      function line(p, extra, btn) {
-        return '<li style="margin-bottom:.45rem"><strong>' + esc(p.id) + '</strong> · ' + esc(p.chief_complaint) + ' · ' + pct(sc[p.id].probability) + '% · waiting ' + waitMin(p) + ' min' +
-          (extra ? ' · ' + extra : '') + (btn ? ' ' + btn : '') + '</li>';
-      }
-      var h = '<div class="card"><h2>AI suggestions <span class="pill info">From the fast-track model</span></h2>' +
-        '<p class="muted">Generated from each patient\'s model score and live fast-track room status. Suggestions only: a nurse decides.</p>';
-      h += '<h3>Send next' + (c.open ? ' (' + c.open + ' fast-track room' + (c.open === 1 ? '' : 's') + ' open)' : ' (no room open yet)') + '</h3>';
-      h += next.length ? '<ol style="padding-left:1.2rem">' + next.map(function (p) {
-        return line(p, p.consult_pref === 'virtual' ? 'prefers video' : '', '<button class="btn btn-sm btn-primary" data-act="accept" data-id="' + esc(p.id) + '">Accept</button>');
-      }).join('') + '</ol>' : '<p class="muted">No eligible patients right now.</p>';
+      function base(p) { return pct(sc[p.id].probability) + '% · waiting ' + waitMin(p) + ' min'; }
+      var over = elig.length > c.open;
+      var h = '<div class="card sg-card">' + head +
+        '<div class="sg-status' + (over ? ' warn' : '') + '" role="status"><strong>' + c.open + ' fast-track room' + (c.open === 1 ? '' : 's') + ' open</strong> · ' + elig.length + ' patient' + (elig.length === 1 ? '' : 's') + ' suggested' +
+        (over ? '<span class="sg-statnote">Consider extra fast-track APP hours (surge playbook)' + (video.length ? ' or video consults for those who agreed' : '') + '.</span>' : '') + '</div>';
+      h += sgSection('next', 'Send next', next.length, '',
+        next.length ? next.map(function (p, i) {
+          return sgRow(i + 1, p, base(p) + (p.consult_pref === 'virtual' ? ' · <span class="ft-chip">prefers video</span>' : ''), '<button class="btn btn-sm btn-primary" data-act="accept" data-id="' + esc(p.id) + '">Accept</button>');
+        }).join('') : '<p class="muted">No eligible patients right now.</p>');
       if (video.length) {
-        h += '<h3>Offer a video consult (' + video.length + ')</h3><p class="muted" style="margin-top:0">These eligible patients said yes to a video consult, which frees a room.</p><ul style="padding-left:1.2rem">' +
-          shown('sg-video', video).map(function (p) { return line(p, '', '<button class="btn btn-sm" data-act="virtual" data-id="' + esc(p.id) + '">Offer video consult</button>'); }).join('') + '</ul>' + moreBtn('sg-video', video.length);
+        h += sgSection('video', 'Offer a video consult', video.length, '',
+          shown('sg-video', video).map(function (p) {
+            return sgRow('', p, base(p) + (nextIds[p.id] ? ' · <span class="ft-chip">also #' + nextIds[p.id] + ' in Send next</span>' : ''), '<button class="btn btn-sm" data-act="virtual" data-id="' + esc(p.id) + '">Offer video</button>');
+          }).join('') + moreBtn('sg-video', video.length));
       }
       if (near.length) {
-        h += '<h3>Close to the cutoff: nurse review (' + near.length + ')</h3><p class="muted" style="margin-top:0">Within 10 points of the ' + pct(thr) + '% cutoff. A quick look may move them either way.</p><ul style="padding-left:1.2rem">' +
+        h += sgSection('near', 'Close to the cutoff — nurse review', near.length, '',
           shown('sg-near', near).map(function (p) {
             var neg = (sc[p.id].contributions || []).filter(function (x) { return x.value < 0; }).sort(function (a, b) { return a.value - b.value; })[0];
-            return line(p, neg ? 'held back mainly by: ' + esc(neg.label) : '', '');
-          }).join('') + '</ul>' + moreBtn('sg-near', near.length);
-      }
-      if (elig.length > c.open) {
-        h += '<p class="banner-warning" style="margin-top:.5rem"><strong>Capacity:</strong> ' + elig.length + ' eligible patients but only ' + c.open +
-          ' fast-track room' + (c.open === 1 ? '' : 's') + ' open. Consider extra fast-track APP hours (surge playbook)' + (video.length ? ' or video consults for those who agreed' : '') + '.</p>';
+            return sgRow('', p, base(p) + (neg ? ' · held back by ' + esc(neg.label) : ''), '<button class="btn btn-sm" data-act="review" data-id="' + esc(p.id) + '">Review</button>');
+          }).join('') + moreBtn('sg-near', near.length));
       }
       return h + '</div>';
     }
@@ -171,18 +181,17 @@
       var list = H.state.patients.filter(function (p) { return p.status === 'virtual-consult'; }).sort(function (a, b) {
         return (a.video_offered_at ? 0 : 1) - (b.video_offered_at ? 0 : 1) || H.util.esiArrivalCompare(a, b);
       });
-      var h = '<div class="card" id="ft-video"><h2>Video consults (' + list.length + ')</h2>';
+      var h = '<div class="card sg-card" id="ft-video"><h2>Video consults <span class="sg-count">' + list.length + '</span></h2>';
       if (!list.length) return h + '<p class="muted">No video consults yet — use “Offer video consult” on an eligible patient.</p></div>';
       function nurseFor(p) {
         var o = H.state.overrides.filter(function (x) { return x.patient_id === p.id && x.nurse_decision === 'Offered video consult'; }).pop();
         return o && o.nurse ? o.nurse : '';
       }
-      h += '<ul class="ft-video-list">' + shown('g-video', list).map(function (p) {
-        var by = nurseFor(p);
-        return '<li><strong>' + esc(p.id) + '</strong> <span class="badge esi-' + p.esi + '">ESI ' + p.esi + '</span> ' + esc(p.chief_complaint) +
-          '<div class="muted">' + esc(p.age) + 'y ' + esc(p.sex) + ' · ' + (p.video_offered_at ? (function (m) { return m < 1 ? 'accepted just now · ' : 'accepted ' + m + ' min ago · '; })(Math.round(H.util.minutesBetween(p.video_offered_at, H.util.now()))) : '') +
-          'waiting ' + waitMin(p) + ' min' + (by ? ' · offered by ' + esc(by) : '') + '</div></li>';
-      }).join('') + '</ul>' + moreBtn('g-video', list.length);
+      h += shown('g-video', list).map(function (p) {
+        var by = nurseFor(p), m = p.video_offered_at ? Math.round(H.util.minutesBetween(p.video_offered_at, H.util.now())) : null;
+        return sgRow('', p, esc(p.age) + 'y ' + esc(p.sex) + ' · ' + (m === null ? '' : (m < 1 ? 'accepted just now · ' : 'accepted ' + m + ' min ago · ')) +
+          'waiting ' + waitMin(p) + ' min' + (by ? ' · offered by ' + esc(by) : ''), '');
+      }).join('') + moreBtn('g-video', list.length);
       return h + '</div>';
     }
 
@@ -191,13 +200,11 @@
       var v = low.filter(function (p) { return p.consult_pref === 'virtual'; }), ip = low.filter(function (p) { return p.consult_pref === 'in_person'; });
       var na = low.length - v.length - ip.length, inVirtual = H.state.patients.filter(function (p) { return p.status === 'virtual-consult'; }).length;
       return '<div class="card"><h2>Consult preference: video or in person</h2>' +
-        '<p class="muted">ESI 4–5 patients are asked on their SMS link (or at the kiosk) whether they would accept a video consult if a clinician agrees it is safe. Some answers here are pre-filled synthetic data.</p>' +
         '<div class="table-wrap"><table class="table"><tbody>' +
         '<tr><td>Prefer a video consult</td><td class="num"><strong>' + v.length + '</strong></td></tr>' +
         '<tr><td>Prefer in person</td><td class="num">' + ip.length + '</td></tr>' +
         '<tr><td>Not asked yet</td><td class="num">' + na + '</td></tr>' +
-        '<tr><td>In a video consult now</td><td class="num">' + inVirtual + '</td></tr></tbody></table></div>' +
-        '<p class="muted" style="margin-bottom:0">A clinician always decides whether video is safe. Patients without a phone can use a video booth at the kiosk, so the option doesn\'t depend on owning a smartphone.</p></div>';
+        '<tr><td>In a video consult now</td><td class="num">' + inVirtual + '</td></tr></tbody></table></div>' + '</div>';
     }
 
     function thresholdHtml() {
@@ -206,8 +213,7 @@
         ['nurse', 'nurse-lead', 'admin'].map(function (r) { return '<option' + (r === role ? ' selected' : '') + '>' + r + '</option>'; }).join('') + '</select></div>' +
         '<div class="row"><label for="ft-thr">Fast-track cutoff: <span id="ft-thr-val">' + pct(t) + '%</span></label>' +
         '<input id="ft-thr" type="range" min="50" max="99" step="1" value="' + pct(t) + '"' + (can ? '' : ' disabled') + ' style="min-width:12rem"></div>' +
-        (can ? '' : '<p class="muted">Only a nurse-lead or admin can change the cutoff.</p>') +
-        '<p class="banner-warning">Lowering the cutoff sends more patients to fast-track but raises bounce-back risk (patients who need a full ED room after all).</p>' +
+        '<p class="muted">Lower cutoff = more patients, higher send-back risk.</p>' +
         '<p><button type="button" class="btn btn-ghost btn-sm" data-goto="results">Model accuracy and fairness: see Results tab</button></p></div>';
     }
 
@@ -248,17 +254,16 @@
       var all = waiting();
       var ftNow = H.state.patients.filter(function (p) { return p.status === 'fast-track'; }).length;
       var offline = H.state.aiOffline || !model;
-      var intro = '<div class="card"><h2>Fast-track candidates</h2><p class="muted">Suggestions only. Nothing moves until a nurse clicks. ' + ftNow + ' patient(s) currently in fast-track. ' +
-        all.length + ' waiting in total.</p>' + (flash ? '<p class="banner-warning" role="status">' + esc(flash) + '</p>' : '') + '</div>';
+      var intro = '<div class="card"><h2>Fast-track candidates</h2><p class="muted">' + ftNow + ' in fast-track · ' + all.length + ' waiting</p>' + (flash ? '<p class="banner-warning" role="status">' + esc(flash) + '</p>' : '') + '</div>';
       var groups;
       if (offline) {
         groups = groupHtml('g-offline', 'Waiting, ESI 3–5', 'AI offline, so no scores: ordered by acuity then arrival.', all.filter(function (p) { return p.esi >= 3; }));
       } else {
         var r = rankCandidates(all);
-        groups = groupHtml('g-elig', 'Suggested for fast-track', '— score above the ' + pct(H.state.settings.fasttrackThreshold) + '% cutoff', r.list.filter(function (p) { return r.scores[p.id].eligible; })) +
-          groupHtml('g-below', 'Below the cutoff', '— not suggested, nurse can still send', r.list.filter(function (p) { return !r.scores[p.id].eligible; }));
+        groups = groupHtml('g-elig', 'Suggested', '', r.list.filter(function (p) { return r.scores[p.id].eligible; })) +
+          groupHtml('g-below', 'Below cutoff', '', r.list.filter(function (p) { return !r.scores[p.id].eligible; }));
       }
-      groups += groupHtml('g-high', 'High acuity (ESI 1–2)', '— never eligible for fast-track', all.filter(function (p) { return p.esi <= 2; }));
+      groups += groupHtml('g-high', 'High acuity · ESI 1–2', '', all.filter(function (p) { return p.esi <= 2; }));
       el.innerHTML =
         '<div class="grid cols-2"><div>' + (H.state.aiOffline ? manualHtml() : '') + intro + groups + '</div>' +
         '<div>' + videoHtml() + suggestionsHtml() + consultHtml() + capacityHtml() + thresholdHtml() + '</div></div>';
@@ -285,6 +290,17 @@
       var act = b.getAttribute('data-act'), id = b.getAttribute('data-id');
       if (act === 'toggle-group') { var k = b.getAttribute('data-key'); expanded[k] = !expanded[k]; }
       else if (act === 'why') openWhy[id] = !openWhy[id];
+      else if (act === 'review') {
+        expanded['g-below'] = true; openWhy[id] = true; flash = '';
+        render();
+        var rowEl = document.getElementById('ftrow-' + id);
+        if (rowEl) {
+          rowEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          rowEl.classList.add('sg-flash');
+          setTimeout(function () { rowEl.classList.remove('sg-flash'); }, 2200);
+        }
+        return;
+      }
       else if (act === 'accept') {
         var p = H.getPatient(id), s = FT.score(p);
         H.logOverride({ module: 'fasttrack', patient_id: id, ai_suggestion: 'Fast-track (' + pct(s.probability) + '%)', nurse_decision: 'Accepted fast-track', reason: 'Accepted AI suggestion' });
@@ -300,6 +316,10 @@
       else if (act === 'cancel') pending = null;
       render();
     });
+    el.addEventListener('toggle', function (e) {
+      var k = e.target.getAttribute && e.target.getAttribute('data-sg');
+      if (k) sgOpen[k] = e.target.open;
+    }, true);
     el.addEventListener('submit', function (e) {
       if (e.target.getAttribute('data-form') !== 'reason') return;
       e.preventDefault();
