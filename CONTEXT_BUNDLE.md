@@ -95,7 +95,7 @@ A single file to paste into Claude (or any AI tool) so it understands the case, 
 - **Equity goals:** same-acuity door-to-provider gap halved for uninsured and Medicaid patients (overall uninsured gap 16 → ≤8 min); LWBS uninsured 5.8% → ≤3.5%, Medicaid 4.6% → ≤3.3%.
 - **Traditional alternative:** one 24/7 triage nurse = $569K/yr ($854K on overtime).
 - **Fast-track model:** cutoff 86%, bounce-back 3.3% (target < 5%). AUC 0.98 overall / 0.97 for ESI 3–5, **on synthetic data only**; real-world benchmark 0.87 (Kaiser); go-live bar AUC ≥ 0.85 in silent mode.
-- **Demo AI:** Claude sorts patients' own-words symptom descriptions (category, red flag, nurse summary) and drafts "leave with a plan" messages that a nurse approves. If AI isn't connected, a clearly labelled keyword fallback runs.
+- **Demo AI:** an LLM (Gemini by default, Claude optional) sorts patients' own-words symptom descriptions (category, red flag, nurse summary) and drafts "leave with a plan" messages that a nurse approves. If AI isn't connected, a clearly labelled keyword fallback runs.
 - **Slides:** https://claude.ai/artifact/MnpDwVSMsAaBWMczpnAJiW · **Script:** video/SCRIPT.md
 
 ## 5. Team

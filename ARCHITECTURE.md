@@ -30,9 +30,9 @@ Status: 🟢 complete draft. Numbers match [CONTEXT_BUNDLE.md](CONTEXT_BUNDLE.md
 |---|---|---|---|
 | Queue ordering | Scores patients **within the same ESI level** and shows every point's reason | Confirms the order, can move or pin a patient with a logged reason | **Charge nurse** |
 | Fast-track | Gives an eligibility score (e.g. "89% likely quick case") from intake data | Accepts, declines or overrides with a reason code | **Triage nurse**; the **APP** owns care once the patient is in fast-track |
-| Symptom updates | **Claude (LLM)** reads a patient's own-words description and returns a category, a red-flag check and a one-line summary for the nurse. A keyword safety net runs alongside it, and either one can page a nurse. Red flags bypass scoring | Re-assesses the patient and confirms before any points count | **Triage nurse** |
+| Symptom updates | **An LLM (Gemini; Claude also supported)** reads a patient's own-words description and returns a category, a red-flag check and a one-line summary for the nurse. A keyword safety net runs alongside it, and either one can page a nurse. Red flags bypass scoring | Re-assesses the patient and confirms before any points count | **Triage nurse** |
 | Wait-time range | Estimates a range from the queue and open rooms (never shown to ESI 1–2) | Staff update room status; can correct estimates | **Charge nurse** |
-| Patient thinking of leaving | Alerts a nurse; **Claude** drafts a "leave with a plan" message in the patient's language | Edits and approves the message before the patient sees it, or talks to the patient in person | **Triage nurse** |
+| Patient thinking of leaving | Alerts a nurse; **the LLM** drafts a "leave with a plan" message in the patient's language | Edits and approves the message before the patient sees it, or talks to the patient in person | **Triage nurse** |
 | Weights & cutoffs | Monthly report comparing suggestions with outcomes | Approves any change; **the model never changes itself** | **ED clinical committee** |
 
 **When the AI is wrong:**
@@ -43,7 +43,7 @@ Status: 🟢 complete draft. Numbers match [CONTEXT_BUNDLE.md](CONTEXT_BUNDLE.md
 ## 1.3 Tools (2 pts)
 | Need | Tool | Rough cost | Why it fits a small ED team |
 |---|---|---|---|
-| Hosting + language model | **Azure OpenAI** or **AWS Bedrock (Claude)** inside Halvian's own cloud tenant, under a BAA | ≈$3K/month | Pay-per-use and HIPAA-eligible. Used only for low-risk text tasks: mapping free-text symptoms to categories and drafting messages. |
+| Hosting + language model | **Google Cloud Vertex AI (Gemini)**, or Azure OpenAI / AWS Bedrock, inside Halvian's own cloud tenant, under a BAA | ≈$3K/month | Pay-per-use and HIPAA-eligible. Used only for low-risk text tasks: mapping free-text symptoms to categories and drafting messages. |
 | Fast-track prediction | **Logistic regression** trained on Halvian's past triage visits (scikit-learn); weights exported to the app | ≈$0 licence; validation time in the monitoring budget | Simple, explainable (each factor's weight is visible), cheap to run, easy to audit for bias |
 | Queue scoring | **Rules-based points matrix** with nurse-set weights | Built into the app | Transparent; nurses can see and change every weight |
 | EHR integration | **FHIR APIs / HL7 ADT feeds** from the existing EHR and registration system, through the hospital's interface engine | ≈$140K over 18 months | Reuses systems Halvian already has. Results go back into the EHR so nurses need no extra login. |
@@ -107,5 +107,5 @@ flowchart LR
 | `data/patients.js`, 40 synthetic patients | Live EHR/registration feed |
 | `data/history.js`, 3,000 synthetic past visits | Halvian's historical triage data (de-identified for training) |
 | Fast-track model trained offline (`scripts/train_fasttrack.py`): bounce-back 3.3% at the 86% cutoff (target < 5%). AUC is 0.98 overall and 0.97 for ESI 3–5, but on **synthetic** labels, which are cleaner than real triage data. The published real-world benchmark is 0.87 (Kaiser) | The same pipeline retrained on Halvian's data. Go-live bar in silent mode: AUC ≥ 0.85 and bounce-back < 5% |
-| Claude called from the browser (`src/shared/ai.js`): via `window.claude` when run as a Claude artifact, or a presenter's API key held in page memory only. A labelled keyword fallback runs if AI isn't connected | Claude (or another model) through Halvian's private Azure OpenAI / AWS Bedrock endpoint under a BAA. Identifiers are stripped before sending, and no data is retained for training |
+| Gemini (default) or Claude called from the browser (`src/shared/ai.js`) with a presenter's API key held in page memory only (or `window.claude` when run as a Claude artifact). A labelled keyword fallback runs if AI isn't connected | Gemini through Halvian's private Google Cloud Vertex AI project (or another model via Azure OpenAI / AWS Bedrock) under a BAA. Identifiers are stripped before sending, and no data is retained for training |
 | Room board clicked by hand | Same, replacing the phone and whiteboard; later, an EHR bed feed |

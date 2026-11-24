@@ -70,7 +70,7 @@ python scripts/generate_data.py && python scripts/train_fasttrack.py
 
 The demo is a static web app with no build step and no server. Open `index.html` in a browser, or use the GitHub Pages link once Pages is enabled (Settings → Pages → `main` branch).
 
-**Connecting the AI (needed for the demo video):** click the **AI** pill in the header, paste an Anthropic API key, and click **Connect Claude**. The pill should read "AI: Claude connected". The key stays in that browser tab's memory only. It is never saved, and it must **never be committed**. When the demo runs as a Claude artifact it connects automatically. Without a key, the two AI features fall back to keyword rules and say so on screen.
+**Connecting the AI (needed for the demo video):** click the **AI** pill in the header, choose **Gemini** (default) or **Claude**, paste that provider's API key, and click **Connect**. A free Gemini key comes from Google AI Studio (aistudio.google.com). The pill should read "AI: Gemini connected". The key stays in that browser tab's memory only. It is never saved, and it must **never be committed**. Without a key, the two AI features fall back to keyword rules and say so on screen.
 
 GitHub Pages link:
 `https://skyasa-ctrl.github.io/HackTheCase26/`

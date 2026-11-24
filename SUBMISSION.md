@@ -47,9 +47,9 @@
 - [x] Rooms-open panel feeding wait-time ranges (Priya)
 - [x] **Fairness panel** by insurance group (Arabella)
 - [x] One app, polished, no broken buttons
-- [x] **Real AI (Claude):** own-words symptom box → category, red flag, nurse summary (keyword safety net alongside)
-- [x] **Real AI (Claude):** "leave with a plan" draft in the patient's language → nurse edits and approves before the patient sees it
-- [x] Honest labels: synthetic-data caveat on model accuracy; "keyword rules, not AI" whenever Claude isn't connected
+- [x] **Real AI (Gemini; Claude optional):** own-words symptom box → category, red flag, nurse summary (keyword safety net alongside)
+- [x] **Real AI (Gemini; Claude optional):** "leave with a plan" draft in the patient's language → nurse edits and approves before the patient sees it
+- [x] Honest labels: synthetic-data caveat on model accuracy; "keyword rules, not AI" whenever no AI is connected
 - [x] Fairness panel includes Medicaid and the same-acuity gap
 
 ## Timeline
@@ -61,7 +61,7 @@
 
 ## Final checks before upload
 - [ ] Video is 5–8 min (target 7:15)
-- [ ] Header showed "AI: Claude connected" during the demo
+- [ ] Header showed "AI: Gemini connected" during the demo
 - [ ] Slides 6, 10, 11 and 15 match the updated docs: Medicaid goals, same-acuity gap, margin-based value ($454K/yr), break-even 0.55 pts, Year-2 ROI ≈224%
 - [ ] Teammates' last names filled in on slides 1 and 15
 - [ ] Sections are in the required order

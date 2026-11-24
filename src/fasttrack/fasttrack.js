@@ -30,10 +30,28 @@
     var openWhy = {};     // patient id -> bool
     var pending = null;   // {id, kind:'decline'|'send'}
     var flash = '';
-    var hiOpen = false;
+    var showAll = false;  // default: top 10 most likely quick cases
+    var TOP_N = 10;
 
     function waiting() {
       return H.state.patients.filter(function (p) { return p.status === 'waiting'; }).sort(H.util.esiArrivalCompare);
+    }
+    function waitMin(p) { return Math.max(0, Math.round(H.util.minutesBetween(p.arrival_time, H.util.now()))); }
+
+    /* Consult preference (virtual vs in person). Patients answer on the Patient view (SMS link) for ESI 4-5.
+     * For the demo, some synthetic answers are pre-filled so the panel isn't empty (marked "synthetic"). */
+    (function seedConsultPrefs() {
+      H.state.patients.forEach(function (p) {
+        if (p.status !== 'waiting' || p.esi < 4 || p.consult_pref) return;
+        var n = parseInt(String(p.id).replace(/\D/g, ''), 10) || 0, r = n % 10;
+        if (r <= 2) { p.consult_pref = 'virtual'; p.consult_pref_source = 'synthetic'; }
+        else if (r <= 6) { p.consult_pref = 'in_person'; p.consult_pref_source = 'synthetic'; }
+      });
+    })();
+    function prefBadge(p) {
+      if (p.esi < 4) return '';
+      return p.consult_pref === 'virtual' ? ' <span class="pill info">Prefers video consult</span>' :
+        p.consult_pref === 'in_person' ? ' <span class="pill">Prefers in person</span>' : ' <span class="pill">Consult pref: not asked</span>';
     }
 
     function barsHtml(contribs) {
@@ -47,12 +65,12 @@
       }).join('') + '<p class="muted">Blue bars (+) push toward "quick case", red bars (−) push away. Values are log-odds; the score is advice only.</p>';
     }
 
-    function rowHtml(p, rank) {
+    function rowHtml(p) {
       var offline = H.state.aiOffline;
       var hi = p.esi <= 2;
       var s = (!hi && !offline && model) ? FT.score(p) : null;
-      var cells = '<td class="num">' + (rank ? '#' + rank : '–') + '</td><td>' + esc(p.id) + '</td><td><span class="badge esi-' + p.esi + '">ESI ' + p.esi + '</span></td>' +
-        '<td>' + esc(p.chief_complaint) + '<div class="muted">' + p.age + 'y, waiting ' + Math.max(0, Math.round(H.util.minutesBetween(p.arrival_time, H.util.now()))) + ' min</div></td>';
+      var cells = '<td>' + esc(p.id) + '</td><td><span class="badge esi-' + p.esi + '">ESI ' + p.esi + '</span></td>' +
+        '<td>' + esc(p.chief_complaint) + '<div class="muted">' + p.age + 'y, waiting ' + waitMin(p) + ' min</div>' + prefBadge(p) + '</td>';
       var score, actions;
       if (hi) {
         score = '<span class="pill danger">Not eligible — high acuity</span>'; actions = '<span class="muted">No fast-track option</span>';
@@ -64,12 +82,14 @@
           (s.eligible ? '<span class="pill ok">Eligible (≥ ' + pct(s.threshold) + '%)</span>' : '<span class="pill warn">Below ' + pct(s.threshold) + '% threshold</span>') +
           '<div><button class="btn btn-ghost btn-sm" data-act="why" data-id="' + esc(p.id) + '" aria-expanded="' + !!openWhy[p.id] + '">' + (openWhy[p.id] ? 'Hide why' : 'Why?') + '</button></div>';
         actions = s.eligible
-          ? '<button class="btn btn-sm btn-primary" data-act="accept" data-id="' + esc(p.id) + '">Accept</button> <button class="btn btn-sm" data-act="decline" data-id="' + esc(p.id) + '">Override / Decline</button>'
+          ? '<button class="btn btn-sm btn-primary" data-act="accept" data-id="' + esc(p.id) + '">Accept</button> ' +
+            (p.consult_pref === 'virtual' && p.esi >= 4 ? '<button class="btn btn-sm" data-act="virtual" data-id="' + esc(p.id) + '">Offer video consult</button> ' : '') +
+            '<button class="btn btn-sm" data-act="decline" data-id="' + esc(p.id) + '">Override / Decline</button>'
           : '<button class="btn btn-sm" data-act="send" data-id="' + esc(p.id) + '">Send to fast-track anyway (override)</button>';
       }
       var html = '<tr>' + cells + '<td>' + score + '</td><td>' + actions + '</td></tr>';
-      if (s && openWhy[p.id]) html += '<tr><td colspan="6">' + barsHtml(s.contributions) + '</td></tr>';
-      if (pending && pending.id === p.id) html += '<tr><td colspan="6">' + reasonForm(p, s) + '</td></tr>';
+      if (s && openWhy[p.id]) html += '<tr><td colspan="5">' + barsHtml(s.contributions) + '</td></tr>';
+      if (pending && pending.id === p.id) html += '<tr><td colspan="5">' + reasonForm(p, s) + '</td></tr>';
       return html;
     }
 
@@ -114,6 +134,56 @@
         'This is a hypothesis to confirm on real Halvian data in silent mode, not proof.</p></div>';
     }
 
+    /* Right-hand panel: suggestions generated from the fast-track model's scores plus live room status. Advice only. */
+    function suggestionsHtml() {
+      if (H.state.aiOffline || !model) return '<div class="card"><h2>AI suggestions</h2><p class="muted">AI is offline, so there are no suggestions. Use the manual criteria.</p></div>';
+      var r = rankCandidates(waiting()), sc = r.scores, c = FT.roomCounts(), thr = H.state.settings.fasttrackThreshold;
+      var elig = r.list.filter(function (p) { return sc[p.id].eligible; });
+      var next = elig.slice(0, Math.max(1, Math.min(3, c.open)));
+      var video = elig.filter(function (p) { return p.consult_pref === 'virtual' && p.esi >= 4; }).slice(0, 3);
+      var near = r.list.filter(function (p) { var pr = sc[p.id].probability; return !sc[p.id].eligible && pr >= thr - 0.10; }).slice(0, 3);
+      function line(p, extra, btn) {
+        return '<li style="margin-bottom:.45rem"><strong>' + esc(p.id) + '</strong> · ' + esc(p.chief_complaint) + ' · ' + pct(sc[p.id].probability) + '% · waiting ' + waitMin(p) + ' min' +
+          (extra ? ' · ' + extra : '') + (btn ? ' ' + btn : '') + '</li>';
+      }
+      var h = '<div class="card"><h2>AI suggestions <span class="pill info">From the fast-track model</span></h2>' +
+        '<p class="muted">Generated from each patient\'s model score and live fast-track room status. Suggestions only: a nurse decides.</p>';
+      h += '<h3>Send next' + (c.open ? ' (' + c.open + ' fast-track room' + (c.open === 1 ? '' : 's') + ' open)' : ' (no room open yet)') + '</h3>';
+      h += next.length ? '<ol style="padding-left:1.2rem">' + next.map(function (p) {
+        return line(p, p.consult_pref === 'virtual' ? 'prefers video' : '', '<button class="btn btn-sm btn-primary" data-act="accept" data-id="' + esc(p.id) + '">Accept</button>');
+      }).join('') + '</ol>' : '<p class="muted">No eligible patients right now.</p>';
+      if (video.length) {
+        h += '<h3>Offer a video consult</h3><p class="muted" style="margin-top:0">These eligible patients said yes to a video consult, which frees a room.</p><ul style="padding-left:1.2rem">' +
+          video.map(function (p) { return line(p, '', '<button class="btn btn-sm" data-act="virtual" data-id="' + esc(p.id) + '">Offer video consult</button>'); }).join('') + '</ul>';
+      }
+      if (near.length) {
+        h += '<h3>Close to the cutoff: nurse review</h3><p class="muted" style="margin-top:0">Within 10 points of the ' + pct(thr) + '% cutoff. A quick look may move them either way.</p><ul style="padding-left:1.2rem">' +
+          near.map(function (p) {
+            var neg = (sc[p.id].contributions || []).filter(function (x) { return x.value < 0; }).sort(function (a, b) { return a.value - b.value; })[0];
+            return line(p, neg ? 'held back mainly by: ' + esc(neg.label) : '', '');
+          }).join('') + '</ul>';
+      }
+      if (elig.length > c.open) {
+        h += '<p class="banner-warning" style="margin-top:.5rem"><strong>Capacity:</strong> ' + elig.length + ' eligible patients but only ' + c.open +
+          ' fast-track room' + (c.open === 1 ? '' : 's') + ' open. Consider extra fast-track APP hours (surge playbook)' + (video.length ? ' or video consults for those who agreed' : '') + '.</p>';
+      }
+      return h + '</div>';
+    }
+
+    function consultHtml() {
+      var low = waiting().filter(function (p) { return p.esi >= 4; });
+      var v = low.filter(function (p) { return p.consult_pref === 'virtual'; }), ip = low.filter(function (p) { return p.consult_pref === 'in_person'; });
+      var na = low.length - v.length - ip.length, inVirtual = H.state.patients.filter(function (p) { return p.status === 'virtual-consult'; }).length;
+      return '<div class="card"><h2>Consult preference: video or in person</h2>' +
+        '<p class="muted">ESI 4–5 patients are asked on their SMS link (or at the kiosk) whether they would accept a video consult if a clinician agrees it is safe. Some answers here are pre-filled synthetic data.</p>' +
+        '<div class="table-wrap"><table class="table"><tbody>' +
+        '<tr><td>Prefer a video consult</td><td class="num"><strong>' + v.length + '</strong></td></tr>' +
+        '<tr><td>Prefer in person</td><td class="num">' + ip.length + '</td></tr>' +
+        '<tr><td>Not asked yet</td><td class="num">' + na + '</td></tr>' +
+        '<tr><td>In a video consult now</td><td class="num">' + inVirtual + '</td></tr></tbody></table></div>' +
+        '<p class="muted" style="margin-bottom:0">A clinician always decides whether video is safe. Patients without a phone can use a video booth at the kiosk, so the option doesn\'t depend on owning a smartphone.</p></div>';
+    }
+
     function thresholdHtml() {
       var can = role !== 'nurse', t = H.state.settings.fasttrackThreshold;
       return '<div class="card"><h2>Threshold</h2><div class="row"><label for="ft-role">Demo role</label><select id="ft-role">' +
@@ -129,53 +199,54 @@
         FT.manualCriteria.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ul></div>';
     }
 
-    function tableHtml(rows) {
-      return '<div class="table-wrap"><table class="table"><thead><tr><th>Rank</th><th>ID</th><th>Acuity</th><th>Complaint</th><th>Fast-track score</th><th>Action</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+    /* Top 10 view, ordered for the decision a nurse actually makes ("who goes into the next fast-track room?"):
+     *   1. Eligible patients (score at or above the cutoff) first, LONGEST WAIT first: every one of them is a
+     *      safe quick case, so among them the fair order is first come, first served.
+     *   2. Then patients below the cutoff, HIGHEST SCORE first: the near-misses a nurse may want to review.
+     * ESI 1-2 are never eligible, so they appear only in "Show all". With AI offline there are no scores,
+     * so the list falls back to acuity then arrival order. A patient with an open form always stays visible. */
+    function rankCandidates(all) {
+      var cand = all.filter(function (p) { return p.esi >= 3; });
+      var sc = {};
+      cand.forEach(function (p) { sc[p.id] = FT.score(p); });
+      cand.sort(function (a, b) {
+        var ea = sc[a.id].eligible, eb = sc[b.id].eligible;
+        if (ea !== eb) return ea ? -1 : 1;
+        if (ea) return waitMin(b) - waitMin(a);
+        return sc[b.id].probability - sc[a.id].probability;
+      });
+      return { list: cand, scores: sc };
     }
-
-    function listHtml() {
-      var list = waiting();
-      if (!list.length) return '<p class="muted">No patients waiting.</p>';
+    function topList(all) {
       var offline = H.state.aiOffline || !model;
-      var hi = list.filter(function (p) { return p.esi <= 2; });
-      var ranked = list.filter(function (p) { return p.esi > 2; });
-      var rows = '', note, i;
-      if (offline) {
-        ranked.sort(function (a, b) { return (b.esi - a.esi) || (new Date(a.arrival_time) - new Date(b.arrival_time)); });
-        note = 'AI offline — ordered by acuity and wait time';
-        rows = ranked.map(function (p, k) { return rowHtml(p, k + 1); }).join('');
-      } else {
-        var sc = {};
-        ranked.forEach(function (p) { sc[p.id] = FT.score(p); });
-        ranked.sort(function (a, b) {
-          return (sc[b.id].probability - sc[a.id].probability) || (new Date(a.arrival_time) - new Date(b.arrival_time));
-        });
-        note = 'Ranked by likelihood of being a quick case (highest first). The nurse decides.';
-        var divided = false, thr = pct(H.state.settings.fasttrackThreshold);
-        var divider = '<tr class="ft-divider"><td colspan="6" style="text-align:center;font-weight:600;border-top:2px dashed currentColor">— Below the ' + thr + '% cutoff —</td></tr>';
-        for (i = 0; i < ranked.length; i++) {
-          if (!divided && !sc[ranked[i].id].eligible) { rows += divider; divided = true; }
-          rows += rowHtml(ranked[i], i + 1);
-        }
-        if (!divided && ranked.length) rows += divider;
+      var cand = all.filter(function (p) { return p.esi >= 3; });
+      if (!offline) cand = rankCandidates(all).list;
+      var top = cand.slice(0, TOP_N);
+      if (pending && !top.some(function (p) { return p.id === pending.id; })) {
+        var pp = H.getPatient(pending.id); if (pp) top.push(pp);
       }
-      var out = '<p class="muted" id="ft-rank-note"><strong>' + esc(note) + '</strong></p>' + (ranked.length ? tableHtml(rows) : '<p class="muted">No rankable patients waiting.</p>');
-      if (hi.length) {
-        out += '<details id="ft-hi"' + (hiOpen ? ' open' : '') + ' style="margin-top:1rem"><summary><strong>High acuity — not eligible (' + hi.length + ')</strong></summary>' +
-          tableHtml(hi.map(function (p) { return rowHtml(p, 0); }).join('')) + '</details>';
-      }
-      return out;
+      return top;
     }
 
     function render() {
+      var all = waiting(), list = showAll ? all : topList(all);
       var ftNow = H.state.patients.filter(function (p) { return p.status === 'fast-track'; }).length;
+      var offline = H.state.aiOffline || !model;
+      var body = list.length ? list.map(rowHtml).join('') : '<tr><td colspan="5" class="muted">No patients waiting.</td></tr>';
+      var viewNote = showAll
+        ? 'Showing all ' + all.length + ' waiting patients in acuity and arrival order.'
+        : 'Showing the top ' + Math.min(TOP_N, list.length) + ' of ' + all.length + ' waiting patients' +
+          (offline ? ' (ESI 3–5, by acuity then arrival; AI offline, so no scores).' : ': eligible patients first, longest wait first (fair order among safe quick cases), then near-misses by score. ESI 1–2 are never eligible.');
+      var toggle = '<button type="button" class="btn btn-sm" data-act="toggle-all">' + (showAll ? 'Show top ' + TOP_N + ' only' : 'Show all ' + all.length + ' waiting patients') + '</button>';
       el.innerHTML =
         '<div class="grid cols-2"><div>' + (H.state.aiOffline ? manualHtml() : '') +
-        '<div class="card"><h2>Waiting patients</h2><p class="muted">Suggestions only. Nothing moves until a nurse clicks. ' + ftNow + ' patient(s) currently in fast-track.</p>' +
+        '<div class="card"><h2>' + (showAll ? 'All waiting patients' : 'Top ' + TOP_N + ' fast-track candidates') + '</h2><p class="muted">Suggestions only. Nothing moves until a nurse clicks. ' + ftNow + ' patient(s) currently in fast-track.</p>' +
+        '<p class="row" style="align-items:center;gap:.6rem"><span class="muted">' + esc(viewNote) + '</span> ' + toggle + '</p>' +
         (flash ? '<p class="banner-warning" role="status">' + esc(flash) + '</p>' : '') +
-        '<div id="ft-list">' + listHtml() + '</div></div></div>' +
-        '<div>' + capacityHtml() + thresholdHtml() + modelCardHtml() + '</div></div>';
+        '<div class="table-wrap"><table class="table"><thead><tr><th>ID</th><th>Acuity</th><th>Complaint</th><th>Fast-track score</th><th>Action</th></tr></thead><tbody>' + body + '</tbody></table></div></div></div>' +
+        '<div>' + suggestionsHtml() + consultHtml() + capacityHtml() + thresholdHtml() + modelCardHtml() + '</div></div>';
     }
+
     function decide(id, kind, reason) {
       var p = H.getPatient(id), s = FT.score(p);
       var sug = H.state.aiOffline ? 'AI offline (no suggestion)' : (s.eligible ? 'Fast-track (' + pct(s.probability) + '%)' : 'Not fast-track (' + pct(s.probability) + '%)');
@@ -193,12 +264,19 @@
       var b = e.target.closest ? e.target.closest('[data-act]') : null;
       if (!b) return;
       var act = b.getAttribute('data-act'), id = b.getAttribute('data-id');
-      if (act === 'why') openWhy[id] = !openWhy[id];
+      if (act === 'toggle-all') showAll = !showAll;
+      else if (act === 'why') openWhy[id] = !openWhy[id];
       else if (act === 'accept') {
         var p = H.getPatient(id), s = FT.score(p);
         H.logOverride({ module: 'fasttrack', patient_id: id, ai_suggestion: 'Fast-track (' + pct(s.probability) + '%)', nurse_decision: 'Accepted fast-track', reason: 'Accepted AI suggestion' });
         H.updatePatient(id, { status: 'fast-track' }, 'fasttrack');
         flash = id + ': moved to fast-track by nurse.';
+      } else if (act === 'virtual') {
+        var pv = H.getPatient(id), sv = FT.score(pv);
+        H.logOverride({ module: 'fasttrack', patient_id: id, ai_suggestion: 'Fast-track (' + pct(sv.probability) + '%); patient prefers video',
+          nurse_decision: 'Offered video consult', reason: 'Eligible quick case; patient agreed to a video consult' });
+        H.updatePatient(id, { status: 'virtual-consult' }, 'fasttrack');
+        flash = id + ': video consult offered by nurse. Room kept free.';
       } else if (act === 'decline' || act === 'send') { pending = { id: id, kind: act }; flash = ''; }
       else if (act === 'cancel') pending = null;
       render();
@@ -220,9 +298,7 @@
       H.state.settings.fasttrackThreshold = v;
       H.emit('settings', { key: 'fasttrackThreshold', value: v });
       var lbl = el.querySelector('#ft-thr-val'); if (lbl) lbl.textContent = pct(v) + '%';
-      var lst = el.querySelector('#ft-list'); if (lst) lst.innerHTML = listHtml();
     });
-    el.addEventListener('toggle', function (e) { if (e.target.id === 'ft-hi') hiOpen = e.target.open; }, true);
     el.addEventListener('change', function (e) {
       if (e.target.id === 'ft-role') { role = e.target.value; render(); }
       else if (e.target.id === 'ft-thr') render();

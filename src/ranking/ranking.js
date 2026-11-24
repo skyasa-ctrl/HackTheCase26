@@ -17,7 +17,9 @@
     { key: 'vitals', label: 'Abnormal vital signs', desc: 'Points for each vital sign outside the normal range.', def: 4, max: 10, step: 0.5, unit: 'pts per abnormal vital sign' },
     { key: 'recheck', label: 'Overdue re-check', desc: 'Points for every 15 min after 60 min without a re-check.', def: 1, max: 4, step: 0.25, unit: 'pts per 15 min past ' + RECHECK_AFTER + ' min since last re-check' },
     { key: 'concern', label: 'Nurse concern', desc: 'Points when a nurse flags ‘I’m worried about this patient.’', def: 10, max: 30, step: 1, unit: 'pts when the nurse flag is set' },
-    { key: 'symptom', label: 'Confirmed symptom update', desc: 'Points when a nurse confirms a patient’s new symptoms.', def: 6, max: 20, step: 1, unit: 'pts for a nurse-confirmed, non-pain update' },
+    { key: 'symSevere', label: 'Symptom update: severe', desc: 'Red-flag symptoms a nurse has assessed, if the patient stays in the waiting room.', def: 12, max: 30, step: 1, unit: 'pts for a severe, nurse-assessed update' },
+    { key: 'symptom', label: 'Symptom update: moderate', desc: 'Nausea or vomiting, dizziness, fever, worsening pain, headache.', def: 6, max: 20, step: 1, unit: 'pts for a moderate, nurse-confirmed update' },
+    { key: 'symMild', label: 'Symptom update: mild', desc: 'Minor injury, skin problem, minor infection, or something else.', def: 2, max: 10, step: 0.5, unit: 'pts for a mild, nurse-confirmed update' },
     { key: 'painCap', label: 'Pain-only limit', desc: 'Most points a pain-only update can add.', def: 3, max: 10, step: 0.5, unit: 'maximum pts when an update is pain-only' }
   ];
   var TIPS = {
@@ -26,7 +28,9 @@
     vitals: "Outside normal at the last check: heart rate under 50 or over 100, systolic BP under 100 or over 180, breathing rate under 10 or over 22, SpO2 under 94%, temperature 38.0 °C or higher. Example: HR 112 and SpO2 92% = 2 abnormal = 8 points at the default.",
     recheck: "Example: last re-checked 90 min ago = 30 min overdue = 2 points at the default.",
     concern: "Any nurse can set the flag. Your clinical gut feeling counts.",
-    symptom: "The patient reports new symptoms through the SMS link and a nurse confirms them at the bedside. Unconfirmed updates add nothing.",
+    symSevere: "Chest pain, trouble breathing, fainting, new confusion, severe bleeding or stroke signs. These page a nurse immediately and bypass scoring; once the nurse has assessed the patient, if they stay in the waiting room these points keep them near the top of their acuity level.",
+    symptom: "The patient reports new symptoms through the SMS link (or a nurse logs them on rounds) and a nurse confirms them. Unconfirmed updates add nothing. If several symptoms are reported, the most severe one counts.",
+    symMild: "Small changes that rarely mean deterioration. Kept low so they don't push sicker patients down.",
     painCap: "Pain matters, but pain alone shouldn’t jump the queue; reassess the patient instead."
   };
   function pts(v) { return v + (v === 1 ? ' pt' : ' pts'); }
@@ -34,6 +38,7 @@
     wait: function (v) { return pts(v) + ' / 10 min'; }, starve: function (v) { return '+' + pts(v); },
     vitals: function (v) { return pts(v) + ' each'; }, recheck: function (v) { return pts(v) + ' / 15 min'; },
     concern: function (v) { return '+' + pts(v); }, symptom: function (v) { return '+' + pts(v); },
+    symSevere: function (v) { return '+' + pts(v); }, symMild: function (v) { return '+' + pts(v); },
     painCap: function (v) { return 'max ' + pts(v); }
   };
   var BAR_SCALE = 25;                                         // points that fill a bar
@@ -60,13 +65,26 @@
     (p.symptom_updates || []).forEach(function (u, i) { if (!u.confirmed_by && !u.dismissed_by) out.push({ u: u, i: i }); });
     return out;
   }
+  /* Latest update that counts: nurse-confirmed non-red-flag updates, or red-flag updates a nurse has
+   * already assessed (unassessed red flags never score: they page a nurse instead). */
   function confirmedUpdate(p) {
     var best = null;
     (p.symptom_updates || []).forEach(function (u) {
-      if (u.confirmed_by && !u.red_flag && (!best || new Date(u.time) > new Date(best.time))) best = u;
+      var counts = (u.confirmed_by && !u.red_flag) || (u.red_flag && u.red_flag_assessed);
+      if (counts && (!best || new Date(u.time) > new Date(best.time))) best = u;
     });
     return best;
   }
+  /* Symptom severity tier for an update; the most severe symptom wins. Patient-view checkboxes and AI categories both map here. */
+  var SEVERE_RE = /chest|breath|faint|confusion|bleeding|stroke|serious injury|neurological/i;
+  var MILD_RE = /something else|minor injury|minor infection|skin|other symptoms/i;
+  function severity(u) {
+    var syms = u.symptoms || [];
+    if (u.red_flag || syms.some(function (x) { return SEVERE_RE.test(x); })) return 'severe';
+    if (syms.length && syms.every(function (x) { return MILD_RE.test(x); })) return 'mild';
+    return 'moderate';
+  }
+  var SEV_KEY = { severe: 'symSevere', moderate: 'symptom', mild: 'symMild' };
   function abnormalVitals(v) {
     var out = [];
     v = v || {};
@@ -111,10 +129,11 @@
     cu = confirmedUpdate(p);
     if (cu) {
       var painOnly = !(cu.symptoms && cu.symptoms.length);
-      pts = painOnly ? Math.min((cu.pain || 0) / 2, weights.painCap) : weights.symptom;
-      parts.push({ key: 'symptom', label: 'Confirmed symptom update', pts: Math.min(pts, painOnly ? weights.painCap : 1e9),
+      var sev = painOnly ? null : severity(cu);
+      pts = painOnly ? Math.min((cu.pain || 0) / 2, weights.painCap) : weights[SEV_KEY[sev]];
+      parts.push({ key: 'symptom', label: 'Confirmed symptom update' + (sev ? ' (' + sev + ')' : ''), pts: Math.min(pts, painOnly ? weights.painCap : 1e9),
         reason: painOnly ? 'Confirmed pain-only update (pain ' + cu.pain + '/10), capped at ' + weights.painCap + ' pts'
-          : 'Nurse-confirmed update: ' + cu.symptoms.join(', ') });
+          : (cu.red_flag ? 'Red-flag update already assessed by a nurse' : 'Nurse-confirmed update') + ', ' + sev + ' tier: ' + cu.symptoms.join(', ') });
     } else {
       parts.push({ key: 'symptom', label: 'Confirmed symptom update', pts: 0,
         reason: pendingUpdates(p).length ? 'Update pending nurse review, so no points yet' : 'No confirmed symptom update' });
@@ -125,9 +144,10 @@
   }
 
   /* ---------- ranking ---------- */
-  /** Returns {ranked:[{p,s,rank,key}]}. Order is ESI first, always; score only reorders inside an ESI group. */
+  /** Returns {ranked:[{p,s,rank,key}], fast:[p]}. Order is ESI first, always; score only reorders inside an ESI group. */
   function computeQueue() {
     var waiting = H.state.patients.filter(function (p) { return p.status === 'waiting'; });
+    var fast = H.state.patients.filter(function (p) { return p.status === 'fast-track'; }).sort(U.esiArrivalCompare);
     var offline = H.state.aiOffline, avgs = esiAverages(waiting);
     var rows = waiting.map(function (p) {
       var s = scorePatient(p, avgs);
@@ -139,7 +159,7 @@
         (new Date(a.p.arrival_time) - new Date(b.p.arrival_time));
     });
     rows.forEach(function (r, i) { r.rank = i + 1; });
-    return { ranked: rows, avgs: avgs };
+    return { ranked: rows, fast: fast, avgs: avgs };
   }
 
   /* ---------- rendering ---------- */
@@ -158,7 +178,7 @@
       '.rk-sumbar span{font-size:.82rem;color:var(--muted);font-weight:600}' +
       '.rk-sumbar li.hot{border-color:var(--danger);background:#fde4e4}.rk-sumbar li.hot b,.rk-sumbar li.hot span{color:#7a1a1f}' +
       '.rk-sumbar li.warm{border-color:var(--warn-line);background:var(--warn-bg)}' +
-      '.rk-row.pinned{border-left:5px solid var(--brand)}' +
+      '.rk-row.pinned{border-left:5px solid var(--brand)}.rk-row.rk-grey{opacity:.7;background:#f0f3f6}' +
       '.rk-head{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .8rem}' +
       '.rk-rank{font-weight:700;font-size:1.1rem;min-width:2rem;color:var(--brand-dark)}' +
       '.rk-main{flex:1 1 14rem;min-width:12rem}.rk-score{font-weight:700;font-size:1.05rem;flex:0 0 4.5rem;text-align:right;font-variant-numeric:tabular-nums}' +
@@ -204,6 +224,7 @@
       '<p class="muted" id="rk-w-last" role="status" aria-live="polite"></p></div></details></div>' +
       '<div class="rk-grid"><div>' +
       '<div class="card"><h2>Ranked waiting list</h2><p class="muted" id="rk-sub"></p><div id="rk-msg" class="sr-only" aria-live="polite"></div><div id="rk-list"></div></div>' +
+      '<div class="card"><details id="rk-fast-box"><summary class="rk-summary" id="rk-fast-sum">Fast-track (not ranked here)</summary><div id="rk-fast"></div></details></div>' +
       '</div><div>' +
       '<div class="card"><details class="rk-logbox" id="rk-logbox"><summary class="rk-summary">Override log <span class="pill" id="rk-log-n">0</span></summary><div id="rk-log"></div></details></div>' +
       '</div></div>' +
@@ -268,7 +289,7 @@
       '<p class="rk-flag-line">Came in for: ' + esc(p.chief_complaint) + '</p>' +
       (syms.length ? '<p class="rk-flag-line">New symptoms reported: <strong>' + esc(syms.join(', ')) + '</strong></p>' : '');
     if (u.ai_summary || u.red_flag_reason) {
-      h += '<p class="rk-flag-line">' + (u.ai_summary ? (u.ai_source === 'gemini' ? 'AI summary: ' : 'Patient wrote: ') + esc(u.ai_summary.replace(/^Patient wrote: /, '')) : '') +
+      h += '<p class="rk-flag-line">' + (u.ai_summary ? (u.ai_source && u.ai_source !== 'rules' ? 'AI summary (' + H.ai.sourceName(u.ai_source) + '): ' : 'Patient wrote: ') + esc(u.ai_summary.replace(/^Patient wrote: /, '')) : '') +
         (u.red_flag_reason ? ' <span class="muted">(' + esc(u.red_flag_reason) + ')</span>' : '') + '</p>';
     }
     h += '<p class="rk-flag-help">Red flags skip scoring — assess now.</p></div>' +
@@ -321,7 +342,7 @@
       if (n.status === 'drafting') {
         html += '<p class="muted">Drafting the message…</p>';
       } else {
-        html += '<p class="ai-source"><strong>' + (n.source === 'gemini' ? 'Draft written by AI (Gemini) in ' + (n.lang === 'es' ? 'Spanish' : 'English') + '. Edit as needed.' :
+        html += '<p class="ai-source"><strong>' + (n.source && n.source !== 'template' ? 'Draft written by AI (' + H.ai.sourceName(n.source) + ') in ' + (n.lang === 'es' ? 'Spanish' : 'English') + '. Edit as needed.' :
           'Standard template (AI not connected). Edit as needed.') + '</strong></p>' +
           '<label for="rk-leave-' + i + '" class="sr-only">Message to patient</label>' +
           '<textarea id="rk-leave-' + i + '" rows="5" style="width:100%;box-sizing:border-box">' + esc(n.draft) + '</textarea>' +
@@ -349,7 +370,7 @@
       h += '<div class="rk-pending"><span class="pill warn">Symptom update pending — nurse review</span> ' +
         (u.symptoms && u.symptoms.length ? esc(u.symptoms.join(', ')) : 'no new symptoms') +
         (u.pain != null ? ', pain ' + esc(u.pain) + '/10' : '') + (u.duration ? ', ' + esc(u.duration) : '') +
-        (u.ai_summary ? '<br><span class="ai-source"><strong>' + (u.ai_source === 'gemini' ? 'AI summary (Gemini)' : 'Keyword fallback, not AI') + ':</strong> ' + esc(u.ai_summary) + '</span>' +
+        (u.ai_summary ? '<br><span class="ai-source"><strong>' + (u.ai_source && u.ai_source !== 'rules' ? 'AI summary (' + H.ai.sourceName(u.ai_source) + ')' : 'Keyword fallback, not AI') + ':</strong> ' + esc(u.ai_summary) + '</span>' +
           (u.free_text ? '<br><span class="muted ai-source">Patient\'s words: "' + esc(u.free_text) + '"</span>' : '') + '<br>' : '') +
         ' <span class="muted">(no points until confirmed)</span> ' +
         '<button type="button" class="btn btn-sm btn-primary" data-act="confirm" data-id="' + esc(p.id) + '" data-i="' + x.i + '">Confirm</button> ' +
@@ -422,6 +443,13 @@
       html += rowHtml(r, { first: !prev || prev.p.esi !== r.p.esi, last: !next || next.p.esi !== r.p.esi });
     });
     root.querySelector('#rk-list').innerHTML = html;
+    var fh = '';
+    q.fast.forEach(function (p) {
+      fh += '<div class="rk-row rk-grey"><div class="rk-head"><span class="badge esi-' + esc(p.esi) + '">ESI ' + esc(p.esi) + '</span><div class="rk-main"><strong>' +
+        esc(p.id) + '</strong> · ' + esc(p.chief_complaint) + '<div class="muted">Waiting ' + waitMin(p) + ' min · in fast-track stream</div></div></div></div>';
+    });
+    root.querySelector('#rk-fast').innerHTML = fh || '<p class="muted">No patients in fast-track.</p>';
+    root.querySelector('#rk-fast-sum').textContent = 'Fast-track patients, greyed and not ranked here (' + q.fast.length + ')';
     return q;
   }
 
@@ -516,7 +544,7 @@
         if (!txt) { if (ta) ta.focus(); return; }
         n.final_text = txt; n.status = 'sent'; n.reviewed_by = nurseName;
         if (txt !== String(n.draft).trim()) {
-          H.logOverride({ module: 'ranking', patient_id: n.patient_id, ai_suggestion: n.source === 'gemini' ? 'AI-drafted leave plan' : 'Standard leave template',
+          H.logOverride({ module: 'ranking', patient_id: n.patient_id, ai_suggestion: n.source && n.source !== 'template' ? 'AI-drafted leave plan (' + H.ai.sourceName(n.source) + ')' : 'Standard leave template',
             nurse_decision: 'Edited the message before sending', reason: 'Nurse review of patient message' });
         }
       } else {
@@ -550,22 +578,6 @@
     refresh();
   }
 
-  /* Demo seed: with no patient page, one long-waiting patient already tapped "thinking of leaving" so the card shows. */
-  function seedLeaveNotice() {
-    if ((H.state.leaveNotices || []).length) return;
-    var cands = H.state.patients.filter(function (p) { return p.status === 'waiting' && p.esi >= 3; });
-    cands.sort(function (a, b) { return waitMin(b) - waitMin(a); });
-    var p = cands[0];
-    if (!p) return;
-    var lang = p.preferred_language === 'es' ? 'es' : 'en';
-    var notice = { patient_id: p.id, time: U.iso(U.now()), nurse_notified: true, status: 'drafting', lang: lang, draft: '', source: '', final_text: '', reviewed_by: null };
-    H.state.leaveNotices = [notice];
-    H.ai.leavePlan(p, lang).then(function (r) {
-      notice.draft = r.text; notice.source = r.source; notice.status = 'pending_review';
-      H.emit('leave:updated', notice);
-    });
-  }
-
   /* ---------- mount ---------- */
   H.registerModule('ranking', {
     mount: function (el) {
@@ -581,8 +593,7 @@
         buildWeights();
         refresh();
       });
-      ['patient:updated', 'symptomUpdate', 'override', 'settings', 'aiOffline', 'leave:updated'].forEach(function (evt) { H.on(evt, function () { refresh(); }); });
-      seedLeaveNotice();
+      ['patient:updated', 'symptomUpdate', 'override', 'settings', 'aiOffline', 'patientview:leaving', 'leave:updated'].forEach(function (evt) { H.on(evt, function () { refresh(); }); });
       refresh();
     }
   });
