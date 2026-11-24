@@ -1,0 +1,560 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ED Patient Flow – Mock</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F3F6F5;--surface:#fff;--ink:#16242B;--muted:#5A6B73;--line:#D5DEDC;--brand:#0F5C63;--brand-ink:#fff;--alert:#B93C0A;--alert-bg:#FDEBDD;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.55 "Atkinson Hyperlegible",system-ui,sans-serif}
+.top{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:14px 20px;background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{font-weight:700;font-size:1.1rem}
+.brand small{display:block;font-weight:400;color:var(--muted);font-size:.8rem}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:none;color:var(--ink);font:inherit;padding:8px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);font-weight:700}
+.badge{background:var(--alert);color:#fff;border-radius:99px;padding:0 8px;margin-left:6px;font-size:.8rem}
+main{max-width:980px;margin:0 auto;padding:24px 20px 60px}
+h1{font-size:1.9rem;line-height:1.2;margin:0 0 8px}
+h2{font-size:1.15rem;margin:0 0 12px}
+p.lead{color:var(--muted);margin:0 0 20px;max-width:62ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:18px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.full{grid-column:1/-1}
+@media(max-width:640px){.grid{grid-template-columns:1fr}}
+label{display:block;font-weight:700;font-size:.92rem;margin-bottom:4px}
+input,select,textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:9px;padding:10px 12px}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.btn{font:inherit;font-weight:700;background:var(--brand);color:var(--brand-ink);border:0;border-radius:10px;padding:12px 22px;cursor:pointer}
+.btn.ghost{background:none;color:var(--ink);border:1.5px solid var(--line)}
+.btn.sm{padding:6px 12px;font-size:.9rem}
+.btn.big{font-size:1.2rem;padding:16px 36px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-top:18px}
+.progress{display:flex;gap:6px;margin-bottom:18px}
+.progress i{flex:1;height:6px;border-radius:3px;background:var(--line)}
+.progress i.on{background:var(--brand)}
+.warn{background:var(--alert-bg);color:var(--alert);border-radius:10px;padding:10px 14px;font-size:.93rem;margin-bottom:18px}
+.scan_unused{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:#E1F0F1;border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin-bottom:18px;color:#0B4147}
+.scan p{margin:0;flex:1;min-width:220px}
+.scan .btn.ghost{color:#0B4147;border-color:#94BEC2}
+.insres{margin-top:12px;padding:10px 14px;border-radius:10px;background:var(--bg);border:1px solid var(--line)}
+.cambox{margin-bottom:18px;text-align:center}
+.cambox video{width:100%;max-width:460px;aspect-ratio:4/3;object-fit:cover;border-radius:14px;background:#000;display:block;margin:0 auto 8px}
+.hidden{display:none!important}
+.welcome{padding:48px 8px 20px;max-width:640px}
+.welcome h1{font-size:2.6rem;letter-spacing:-.02em}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{font:inherit;color:var(--ink);border:1.5px solid var(--line);border-radius:99px;padding:7px 15px;cursor:pointer;background:var(--bg)}
+.chips button[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--line)}
+.srow:last-child{border-bottom:0}
+.scale{display:flex;gap:6px}
+.scale button{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-weight:700;cursor:pointer}
+.scale button[aria-checked="true"]{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.scalehead{display:flex;justify-content:space-between;color:var(--muted);font-size:.85rem;margin-bottom:4px}
+.meta{color:var(--muted);font-size:.88rem}
+.banner{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;background:#E1F0F1;color:#0B4147;border:1px solid var(--line);border-bottom:0;border-radius:14px 14px 0 0;padding:16px 22px}
+.banner .bn{font-size:1.9rem;font-weight:700;line-height:1.1;letter-spacing:-.02em}
+.banner .meta{color:#3E6A70}
+.banner .dot{background:#94BEC2}
+.banner .track{margin:8px 0 0}
+.banner .me{background:#0F5C63;color:#fff}
+.banner .right{text-align:right}
+@media(max-width:640px){.banner .right{text-align:left}}
+.track{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:16px 0 6px}
+.dot{width:16px;height:16px;border-radius:50%;background:var(--line)}
+.me{padding:4px 12px;border-radius:99px;background:var(--brand);color:var(--brand-ink);font-weight:700;font-size:.9rem}
+.chat{display:flex;flex-direction:column;height:520px;border-radius:0 0 14px 14px}
+.log{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:4px 2px}
+.msg{max-width:88%;padding:9px 13px;border-radius:14px;background:var(--bg);border:1px solid var(--line)}
+.msg.me{align-self:flex-end;background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.msg small{display:block;opacity:.7;font-size:.75rem}
+.quick{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.send{display:flex;gap:8px}
+.send input{flex:1}
+.alert{border:1.5px solid var(--alert);background:var(--alert-bg);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.alert.done{border-color:var(--line);background:var(--bg);opacity:.7}
+dl{display:grid;grid-template-columns:110px 1fr;gap:4px 12px;margin:0}
+dt{color:var(--muted)}dd{margin:0}
+.choices{display:flex;gap:14px;flex-wrap:wrap}.choices .btn{flex:1;min-width:230px}
+.lic{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:700px){.lic{grid-template-columns:1fr}}
+.lic .panel{margin:0}.lic .btn{margin:0 6px 6px 0}
+.st{font-size:.92rem;color:var(--muted);min-height:1.4em;margin:2px 0 10px}.st.ok{color:#1F7A4D;font-weight:700}
+.thumb{max-width:100%;max-height:120px;border-radius:8px;border:1px solid var(--line);display:block;margin:0 0 10px}
+.note{background:#E1F0F1;color:#0B4147;border-radius:10px;padding:10px 14px;margin-bottom:16px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ecard{border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px;background:var(--bg)}.ecard h2{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.insbox{padding:14px 16px;border-radius:12px;background:#E1F0F1;color:#0B4147;margin-bottom:14px}
+.insbox dl{grid-template-columns:110px 1fr}.insbox dt{color:#3E6A70}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid #94BEC2;border-top-color:#0F5C63;border-radius:50%;animation:sp 1s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.spin{animation:none}}
+.demo{display:flex;gap:8px;align-items:center;font-weight:400;color:var(--muted);font-size:.85rem;margin-top:14px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Halvian Medical Center<small>Emergency Department · demo with mock data</small></div>
+  <div class="seg" role="group" aria-label="Choose demo view">
+    <button id="tabP" aria-pressed="true">Patient view</button>
+    <button id="tabS" aria-pressed="false">Staff inbox<span id="sbadge" class="badge hidden">0</span></button>
+  </div>
+</header>
+
+<main>
+<section id="patient">
+
+  <div class="pg welcome" id="pg-welcome">
+    <h1>Welcome to Halvian Medical Center Emergency Department</h1>
+    <p class="lead">Check in here and we’ll collect the details the care team needs. It takes about three minutes.</p>
+    <div class="warn"><b>Life-threatening emergency?</b> Tell the front desk right away or call 911.</div>
+    <button class="btn big" data-go="pg-ask">Check in</button>
+    <label class="demo"><input type="checkbox" id="noMatch" style="width:auto"> Demo: simulate “no insurance found”</label>
+  </div>
+
+  <div class="pg hidden" id="pg-ask">
+    <h1>Do you have your driver’s license with you?</h1>
+    <p class="lead">If you do, we can read it to fill in your details. If not, you can type them in.</p>
+    <div class="choices">
+      <button class="btn big" data-go="pg-scan">Yes, I have it</button>
+      <button class="btn big ghost" id="noLic">No, I’ll type my details</button>
+    </div>
+  </div>
+
+  <div class="pg hidden" id="pg-scan">
+    <h1>Scan your license</h1>
+    <p class="lead">Two quick scans: the front, then the back. Photos stay on this device and aren’t saved.</p>
+    <div class="lic">
+      <div class="panel">
+        <h2>1. Front of license</h2>
+        <div class="st" id="frontSt">Not scanned yet</div>
+        <img id="frontThumb" class="thumb hidden" alt="Front of your license">
+        <button class="btn" id="frontCam" type="button">Use camera</button>
+        <button class="btn ghost" id="frontUp" type="button">Upload photo</button>
+        <input type="file" id="frontFile" accept="image/*" class="hidden">
+      </div>
+      <div class="panel">
+        <h2>2. Back of license (barcode)</h2>
+        <div class="st" id="backSt">Not scanned yet</div>
+        <button class="btn" id="backCam" type="button">Scan barcode</button>
+        <button class="btn ghost" id="backUp" type="button">Upload photo</button>
+        <input type="file" id="backFile" accept="image/*" class="hidden">
+      </div>
+    </div>
+    <div class="cambox hidden" id="camBox">
+      <video id="cam" playsinline muted></video>
+      <button class="btn sm" id="snap" type="button">Take photo of front</button>
+      <button class="btn ghost sm" id="camStop" type="button">Close camera</button>
+    </div>
+    <p class="meta" id="scanMsg" role="status" style="margin:14px 0 0">The barcode on the back is the most accurate. If it can’t be read, we’ll read the front instead.</p>
+    <div class="row">
+      <span><button class="btn ghost" data-go="pg-ask">Back</button> <button class="btn ghost" id="scanDemo" type="button">Use a sample license (demo)</button></span>
+      <span><button class="btn ghost" id="scanSkip" type="button">Skip, I’ll type it</button> <button class="btn" id="scanGo" type="button" disabled>Continue</button></span>
+    </div>
+  </div>
+
+  <div class="pg hidden" id="pg-you">
+    <div class="progress"><i class="on"></i><i></i><i></i><i></i></div>
+    <h1>About you</h1>
+    <p class="lead">Step 1 of 4</p>
+    <div class="note hidden" id="fillNote" role="status"></div>
+    <div class="panel">
+      <div class="grid">
+        <div><label for="fn">First name</label><input id="fn" autocomplete="given-name"></div>
+        <div><label for="mn">Middle name (if applicable)</label><input id="mn" autocomplete="additional-name"></div>
+        <div><label for="ln">Last name</label><input id="ln" autocomplete="family-name"></div>
+        <div><label for="dob">Date of birth</label><input id="dob" type="date"></div>
+        <div class="full"><label for="gen">Gender</label>
+          <select id="gen"><option value="">Select…</option><option>Female</option><option>Male</option><option>Another gender</option><option>Prefer not to say</option></select></div>
+        <div class="full"><label for="street">Street address</label><input id="street" autocomplete="street-address"></div>
+        <div><label for="city">City</label><input id="city" autocomplete="address-level2"></div>
+        <div class="g2"><div><label for="state">State</label><input id="state" maxlength="2" autocomplete="address-level1"></div>
+          <div><label for="zip">ZIP code</label><input id="zip" inputmode="numeric" maxlength="10" autocomplete="postal-code"></div></div>
+      </div>
+      <div class="row"><span class="meta" role="alert" id="err1"></span><span><button class="btn ghost" data-go="pg-ask">Back</button> <button class="btn" id="n1">Next</button></span></div>
+    </div>
+  </div>
+
+  <div class="pg hidden" id="pg-ec">
+    <div class="progress"><i class="on"></i><i class="on"></i><i></i><i></i></div>
+    <h1>Emergency contact</h1>
+    <p class="lead">Step 2 of 4. Someone we can call if we need to.</p>
+    <div class="panel">
+      <div id="ecList"></div>
+      <button class="btn ghost" id="addEc" type="button">+ Add another emergency contact</button>
+      <div class="row"><span class="meta" role="alert" id="err2"></span><span><button class="btn ghost" data-go="pg-you">Back</button> <button class="btn" id="n2">Next</button></span></div>
+    </div>
+  </div>
+
+  <div class="pg hidden" id="pg-sym">
+    <div class="progress"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+    <h1>Your symptoms</h1>
+    <p class="lead">Step 3 of 4. Tap everything that applies, then rate how bad each one is.</p>
+    <div class="panel"><h2>Common symptoms</h2><div class="chips" id="chips"></div></div>
+    <div class="panel">
+      <h2>Rate your symptoms</h2>
+      <div class="scalehead"><span>Tap a symptom above to add it</span><span>1 = mild · 5 = severe</span></div>
+      <div id="sel"></div>
+    </div>
+    <div class="panel">
+      <div class="grid">
+        <div class="full"><label for="desc">Describe what’s happening</label><textarea id="desc" rows="3" placeholder="When did it start? What were you doing? Anything that makes it better or worse?"></textarea></div>
+        <div><label for="all">Allergies</label><input id="all" placeholder="Medications, food, latex… or “none”"></div>
+        <div><label for="med">Current medications</label><input id="med" placeholder="Name and dose, or “none”"></div>
+      </div>
+      <div class="row"><span class="meta" role="alert" id="err3"></span><span><button class="btn ghost" data-go="pg-ec">Back</button> <button class="btn" id="n3">Next</button></span></div>
+    </div>
+  </div>
+
+  <div class="pg hidden" id="pg-ins">
+    <div class="progress"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
+    <h1>Insurance</h1>
+    <p class="lead">Step 4 of 4. Optional, and it never holds up your check-in. Registration can help you later.</p>
+    <div class="panel">
+      <div id="insSearch" class="insbox"><span class="spin" aria-hidden="true"></span> Looking for your insurance using the details you gave us…</div>
+      <div id="insFound" class="insbox hidden">
+        <h2>We found a plan. Is this yours?</h2>
+        <dl id="insFoundDl"></dl>
+        <div style="margin-top:12px"><button class="btn" id="insYes" type="button">Yes, that’s mine</button> <button class="btn ghost" id="insNo" type="button">No</button></div>
+      </div>
+      <div id="insDone" class="insbox hidden"></div>
+      <div id="insManual" class="hidden">
+        <p id="insWhy" class="meta" style="margin:0 0 12px"></p>
+        <div style="margin-bottom:14px">
+          <button class="btn" id="cardCam" type="button">Scan insurance card</button>
+          <button class="btn ghost" id="cardUp" type="button">Upload photo</button>
+          <input type="file" id="cardFile" accept="image/*" capture="environment" class="hidden">
+          <img id="cardThumb" class="thumb hidden" alt="Insurance card" style="margin-top:10px">
+          <div class="st" id="cardSt" role="status"></div>
+        </div>
+        <div class="cambox hidden" id="cardBox"><video id="cardVid" playsinline muted></video><button class="btn sm" id="cardSnap" type="button">Take photo</button> <button class="btn ghost sm" id="cardClose" type="button">Close camera</button></div>
+        <div class="grid">
+          <div><label for="ins">Insurance provider</label><input id="ins" placeholder="e.g. Blue Cross"></div>
+          <div><label for="mid">Member ID</label><input id="mid"></div>
+        </div>
+      </div>
+      <div class="row"><span></span><span><button class="btn ghost" data-go="pg-sym">Back</button> <button class="btn" id="n4">Finish check-in</button></span></div>
+    </div>
+  </div>
+
+  <div class="pg hidden" id="pg-wait">
+    <h1 id="hello"></h1>
+    <p class="lead">You’re checked in. Please stay in the waiting area. We’ll call your name when a bed is ready.</p>
+    <div class="banner" role="status">
+      <div><div class="meta">Estimated wait</div><div class="bn" id="estMin"></div><div class="meta" id="estRange"></div></div>
+      <div class="right"><div><b id="aheadN">0</b> <span id="aheadL">people</span> ahead of you</div><div class="track" id="track" aria-hidden="true"></div><div class="meta">Estimates can change if more urgent cases arrive.</div></div>
+    </div>
+    <div class="panel chat">
+      <h2>Care team chat</h2>
+      <div class="log" id="log" role="log" aria-live="polite"></div>
+      <div class="meta" id="next15"></div>
+      <div class="quick" id="quick"></div>
+      <form class="send" id="sendf"><input id="txt" aria-label="Type an update" placeholder="Tell us if anything changes…" autocomplete="off"><button class="btn" type="submit">Send</button></form>
+    </div>
+    <div class="panel"><h2>What you told us</h2><dl id="sum"></dl></div>
+    <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:6px"><input type="checkbox" id="fast" style="width:auto"> Demo speed: 1 second = 1 minute</label>
+    <button class="btn ghost sm" id="skip" style="margin-top:8px">Demo: trigger next check-in now</button>
+  </div>
+</section>
+
+<section id="staff" class="hidden">
+  <h1>Staff inbox</h1>
+  <p class="lead">Placeholder: patient updates land here. The full staff view comes later.</p>
+  <div class="panel" id="alerts"></div>
+</section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const SYMS=['Chest pain','Shortness of breath','Abdominal pain','Fever','Headache','Dizziness','Nausea or vomiting','Injury or fall','Bleeding','Cough','Back pain','Weakness or numbness','Rash','Other'];
+const HIGH=['Chest pain','Shortness of breath','Weakness or numbness','Bleeding'];
+const Q={'Chest pain':'is the chest pain getting worse, or spreading to your arm, jaw or back','Shortness of breath':'is it harder to breathe than before','Abdominal pain':'is the abdominal pain getting stronger or moving to a new spot','Fever':'do you feel hotter, or have chills or shaking','Headache':'is the headache getting worse, or have you noticed vision changes','Dizziness':'do you feel more dizzy or close to fainting','Nausea or vomiting':'have you vomited since you checked in','Injury or fall':'is there more swelling, bleeding or pain around the injury','Bleeding':'is the bleeding heavier than before','Weakness or numbness':'is the weakness or numbness spreading or getting worse'};
+const URGENT=/chest|breath|faint|bleed|worse|severe|numb|unconscious|can.?t|stroke|vomit/i;
+let sel={},P=null,msgs=[],alerts=[],sim=0,nextCheck=900,speed=1,est0=0,ahead0=0,timer=null,called=false,qi=0;
+
+/* ---------- navigation ---------- */
+function go(id){stopCam();if(typeof stopCard==='function')stopCard();document.querySelectorAll('.pg').forEach(p=>p.classList.toggle('hidden',p.id!==id));scrollTo(0,0)}
+document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));
+function show(v){$('patient').classList.toggle('hidden',v!=='p');$('staff').classList.toggle('hidden',v!=='s');
+  $('tabP').setAttribute('aria-pressed',v==='p');$('tabS').setAttribute('aria-pressed',v==='s');if(v==='s')renderStaff()}
+$('tabP').onclick=()=>show('p');$('tabS').onclick=()=>show('s');
+const manual=()=>{$('fillNote').classList.add('hidden');go('pg-you')};
+$('noLic').onclick=manual;$('scanSkip').onclick=manual;
+
+/* ---------- barcode decoding (PDF417 on the back) ---------- */
+let stream=null,loopOn=false,nd,mode=null;
+const ANGLES=[0,-3,3,-6,6,-9,9];
+const libsOk=()=>!!window.ZXing;
+const tick0=()=>new Promise(r=>setTimeout(r,0));
+const msg=t=>$('scanMsg').textContent=t;
+function zhints(){const h=new Map();h.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[ZXing.BarcodeFormat.PDF417]);h.set(ZXing.DecodeHintType.TRY_HARDER,true);return h}
+function tryDecode(src,w,h,k,ang){
+  const c=document.createElement('canvas');c.width=Math.round(w*k);c.height=Math.round(h*k);
+  const x=c.getContext('2d',{willReadFrequently:true});x.imageSmoothingQuality='high';
+  x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
+  if(ang){x.translate(c.width/2,c.height/2);x.rotate(ang*Math.PI/180);x.drawImage(src,-c.width/2,-c.height/2,c.width,c.height)}
+  else x.drawImage(src,0,0,c.width,c.height);
+  try{const r=new ZXing.MultiFormatReader();r.setHints(zhints());
+    return r.decode(new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(new ZXing.HTMLCanvasElementLuminanceSource(c)))).getText()}catch(e){return null}}
+async function nativeDecode(src){
+  try{
+    if(nd===undefined){nd=false;if('BarcodeDetector' in window){const f=await BarcodeDetector.getSupportedFormats();if(f.includes('pdf417'))nd=new BarcodeDetector({formats:['pdf417']})}}
+    if(!nd)return null;const r=await nd.detect(src);return r.length?r[0].rawValue:null}catch(e){return null}}
+const title=s=>String(s||'').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()).trim();
+function parseAAMVA(raw){
+  if(!raw||!/ANSI|AAMVA/.test(raw))return null;
+  const f={};
+  raw.split(/[\r\n]+/).forEach(l=>{l=l.replace(/^.*?(?:ANSI |AAMVA).*?(?:DL|ID)(?=D[A-Z]{2})/,'');if(l.length>3&&/^D[A-Z]{2}/.test(l))f[l.slice(0,3)]=l.slice(3).trim()});
+  let first=f.DAC,middle=f.DAD;
+  if(!first&&f.DCT){const p=f.DCT.split(/[ ,]+/);first=p[0];middle=middle||p.slice(1).join(' ')}
+  const last=f.DCS||f.DAB;
+  if(!first||!last||!f.DBB)return null;
+  const b=f.DBB.replace(/\D/g,'');let y,m,d;
+  if(+b.slice(0,2)>12){y=b.slice(0,4);m=b.slice(4,6);d=b.slice(6,8)}else{m=b.slice(0,2);d=b.slice(2,4);y=b.slice(4,8)}
+  return{first:title(first),middle:title(middle),last:title(last),dob:y+'-'+m+'-'+d,
+    gender:{'1':'Male','2':'Female','9':'Prefer not to say'}[f.DBC]||'',
+    street:title(f.DAG),city:title(f.DAI),state:(f.DAJ||'').toUpperCase(),zip:(f.DAK||'').replace(/\D/g,'').slice(0,5)}}
+const loadImg=url=>new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=url});
+async function decodeBarcodeImage(url){
+  const im=await loadImg(url);const sc=Math.min(1,2600/Math.max(im.naturalWidth,im.naturalHeight));
+  const w=Math.round(im.naturalWidth*sc),h=Math.round(im.naturalHeight*sc);
+  let t=await nativeDecode(im),found=false;
+  for(const k of (w<=1400?[1,2]:[1])){for(const a of ANGLES){
+    if(t){found=true;const d=parseAAMVA(t);if(d)return d}
+    t=tryDecode(im,w,h,k,a);await tick0()}}
+  if(t){found=true;const d=parseAAMVA(t);if(d)return d}
+  return found?'notlic':null}
+
+/* ---------- reading the front (OCR fallback) ---------- */
+function parseFront(text){
+  const raw=String(text).toUpperCase().replace(/[|_]/g,' ');
+  const lines=raw.split(/\n+/).map(l=>l.replace(/\s+/g,' ').trim()).filter(Boolean);
+  const o={};
+  const re=/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/g,dates=[];let m;
+  while((m=re.exec(raw))){const mo=+m[1],da=+m[2],y=+m[3];if(mo>=1&&mo<=12&&da>=1&&da<=31&&y>1900&&y<=new Date().getFullYear())dates.push({y,mo,da})}
+  const dm=raw.match(/(?:DOB|BIRTH ?DATE|BIRTH)\D{0,8}(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
+  const dd=dm?{mo:+dm[1],da:+dm[2],y:+dm[3]}:dates.sort((a,b)=>a.y-b.y||a.mo-b.mo||a.da-b.da)[0];
+  if(dd)o.dob=dd.y+'-'+String(dd.mo).padStart(2,'0')+'-'+String(dd.da).padStart(2,'0');
+  const sx=raw.match(/\bSEX\b\D{0,3}([MF])\b/)||raw.match(/(?:DOB|BIRTH)[^\n]*\b([MF])\b/);
+  if(sx)o.gender=sx[1]==='M'?'Male':'Female';
+  let ai=lines.findIndex(l=>/^\d{1,6} [A-Z0-9 .#'\-]{3,}$/.test(l)&&!/[\/]/.test(l));
+  if(ai>=0){o.street=title(lines[ai]);
+    for(const l of lines.slice(ai+1,ai+3)){const c=l.match(/^([A-Z][A-Z .'\-]+?)[, ]+([A-Z]{2}) (\d{5})(?:-\d{4})?\b/);if(c){o.city=title(c[1]);o.state=c[2];o.zip=c[3];break}}}
+  let ln=(raw.match(/\b(?:LN|LAST NAME)[: ]+([A-Z'\- ]{2,25})/)||[])[1],fn=(raw.match(/\b(?:FN|FIRST NAME)[: ]+([A-Z'\- ]{2,30})/)||[])[1];
+  if(!ln||!fn){
+    const SKIP=/DRIVER|LICEN|STATE|USA|CLASS|ENDORS|RESTR|DOB|SEX|HGT|HEIGHT|WGT|EYES|HAIR|ISS|EXP|DONOR|ORGAN|VETERAN|IDENTIF|DUPLICATE|REAL ID|NOT FOR|FEDERAL|DLN|AVENUE|STREET/;
+    let from=0;lines.forEach((l,i)=>{if(/DRIVER|LICEN/.test(l))from=i+1});
+    const cand=lines.slice(from,ai>=0?ai:lines.length).map(l=>l.replace(/^(?:[12]\s+)/,'')).filter(l=>/^[A-Z][A-Z' \-,]{1,30}$/.test(l)&&!SKIP.test(l)&&l.split(' ').length<=3);
+    if(cand.length>=2){ln=ln||cand[0];fn=fn||cand[1]}
+    else if(cand.length===1){const c=cand[0];if(c.includes(',')){const p=c.split(',');ln=p[0];fn=p[1]}else{const p=c.split(' ');if(p.length>=2){fn=p[0];ln=p[p.length-1];o.middle=title(p.slice(1,-1).join(' '))}}}}
+  if(fn){const p=fn.trim().split(/ +/);o.first=title(p[0]);if(p.length>1&&!o.middle)o.middle=title(p.slice(1).join(' '))}
+  if(ln)o.last=title(ln.replace(/,/g,''));
+  return(o.first||o.last||o.dob)?o:null}
+async function ocrFront(url){
+  if(!window.Tesseract)return null;
+  try{
+    const w=await Tesseract.createWorker('eng',1,{
+      workerPath:'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js',
+      corePath:'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/',
+      langPath:'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@1.0.0/4.0.0_best_int'});
+    const r=await w.recognize(url);await w.terminate();return parseFront(r.data.text)}catch(e){return null}}
+
+/* ---------- scan screen ---------- */
+let L={img:null,back:null};
+function setSt(id,t,ok){const e=$(id);e.textContent=t;e.classList.toggle('ok',!!ok)}
+const updGo=()=>{$('scanGo').disabled=!(L.img||L.back)};
+function setFront(url){L.img=url;$('frontThumb').src=url;$('frontThumb').classList.remove('hidden');setSt('frontSt','Front captured ✓',1);updGo()}
+function gotBack(d){L.back=d;setSt('backSt','Barcode read ✓',1);updGo()}
+function stopCam(){loopOn=false;mode=null;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}const v=$('cam');if(v)v.srcObject=null;$('camBox').classList.add('hidden')}
+async function startCam(m){
+  if(m==='back'&&!libsOk()){msg('The barcode reader didn’t load. Upload a photo or continue with the front.');return}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){msg('This browser can’t use the camera here. Please upload a photo instead.');return}
+  stopCam();mode=m;$('camBox').classList.remove('hidden');$('snap').classList.toggle('hidden',m!=='front');msg('Starting camera…');
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}});
+    const v=$('cam');v.srcObject=stream;await v.play();
+    const tr=stream.getVideoTracks()[0];
+    try{await tr.applyConstraints({advanced:[{focusMode:'continuous'}]})}catch(e){}
+    const st=tr.getSettings(),info='Camera '+st.width+'×'+st.height+'. ';
+    if(m==='front'){msg(info+'Fit the FRONT of the license in view, hold steady, then tap “Take photo of front”.');return}
+    let n=0,seen=false;loopOn=true;
+    msg(info+'Hold the BACK of the license close so the barcode fills most of the width of the view.');
+    const tick=async()=>{
+      if(!loopOn)return;
+      const W=v.videoWidth,H=v.videoHeight;
+      if(W){
+        n++;let t=await nativeDecode(v);
+        if(!t)t=tryDecode(v,W,H,1,0);
+        for(let j=0;j<2&&!t;j++)t=tryDecode(v,W,H,1,ANGLES[1+((n*2+j)%(ANGLES.length-1))]);
+        if(!t&&n%4===0&&W<=1400)t=tryDecode(v,W,H,2,ANGLES[n%ANGLES.length]);
+        if(!loopOn)return;
+        if(t){const d=parseAAMVA(t);if(d){stopCam();gotBack(d);msg('Barcode read. You can continue.');return}
+          if(!seen){seen=true;msg(info+'A barcode was read but it isn’t a driver’s license barcode. Show the back of the license.')}}
+        else if(n%10===0&&!seen)msg(info+'Scanning… ('+n+' frames). Move closer, hold steady, avoid glare. If this keeps failing, close the camera and scan the front instead.');
+      }
+      setTimeout(tick,60)};
+    tick();
+  }catch(e){stopCam();const n=e&&e.name;msg(n==='NotFoundError'?'No camera was found on this device. You can upload a photo instead.':n==='NotReadableError'?'Your camera is in use by another app. Close it and try again, or upload a photo.':'We couldn’t open your camera ('+(n||'blocked')+'). Check the camera permission for this site, or upload a photo instead.')}}
+const fileToUrl=f=>new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(f)});
+$('frontCam').onclick=()=>startCam('front');
+$('backCam').onclick=()=>startCam('back');
+$('frontUp').onclick=()=>$('frontFile').click();
+$('backUp').onclick=()=>$('backFile').click();
+$('camStop').onclick=()=>{stopCam();msg('Camera closed.')};
+$('snap').onclick=()=>{const v=$('cam');if(!v.videoWidth)return;const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);setFront(c.toDataURL('image/jpeg',.92));stopCam();msg('Front captured. Now scan the back, or continue.')};
+$('frontFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(f)setFront(await fileToUrl(f))};
+$('backFile').onchange=async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  if(!libsOk()){setSt('backSt','The barcode reader didn’t load.');return}
+  setSt('backSt','Reading barcode…');
+  let r=null;try{r=await decodeBarcodeImage(await fileToUrl(f))}catch(x){}
+  if(r&&r!=='notlic')gotBack(r);
+  else setSt('backSt',r==='notlic'?'That barcode isn’t from a driver’s license.':'Couldn’t read the barcode. Try again, or continue and we’ll read the front.')};
+function fillForm(d){['first:fn','middle:mn','last:ln','dob:dob','gender:gen','street:street','city:city','state:state','zip:zip'].forEach(p=>{const[k,id]=p.split(':');if(d[k])$(id).value=d[k]})}
+function resetScan(){L={img:null,back:null};$('frontThumb').classList.add('hidden');$('frontThumb').removeAttribute('src');setSt('frontSt','Not scanned yet');setSt('backSt','Not scanned yet');updGo()}
+$('scanGo').onclick=async()=>{
+  const b=$('scanGo');b.disabled=true;
+  let d=L.back,src='barcode';
+  if(!d&&L.img){msg('Reading the front of your license… this can take several seconds.');d=await ocrFront(L.img);src='front'}
+  if(d){fillForm(d);const n=$('fillNote');n.textContent=(src==='barcode'?'We filled this in from your license barcode.':'We read this from the front of your license, which can make mistakes.')+' Please check every field.';n.classList.remove('hidden')}
+  else{const n=$('fillNote');n.textContent='We couldn’t read your license, so please type your details.';n.classList.remove('hidden')}
+  resetScan();msg('The barcode on the back is the most accurate. If it can’t be read, we’ll read the front instead.');go('pg-you')};
+const SAMPLE='@\n\u001e\rANSI 636033080002DL00410288ZM03290015DLDAQRIVERA123456\nDCSRIVERA\nDACJORDAN\nDADMICHAEL\nDBD01012024\nDBB04171988\nDBA04172032\nDBC1\nDAG1234 MAPLE AVE\nDAIFARMINGTON HILLS\nDAJMI\nDAK483350000\n';
+$('scanDemo').onclick=()=>{const d=parseAAMVA(SAMPLE);if(d){gotBack(d);msg('Sample barcode loaded. Tap Continue.')}};
+
+/* ---------- form steps ---------- */
+$('n1').onclick=()=>{
+  if(['fn','ln','dob','gen','street','city','state','zip'].some(i=>!$(i).value.trim())){$('err1').textContent='Please fill in your name, date of birth, gender and address. Middle name is optional.';return}
+  $('err1').textContent='';startDiscovery();go('pg-ec')};
+let ecN=0;
+function addEc(){
+  ecN++;const i=ecN,first=!$('ecList').children.length;
+  const d=document.createElement('div');d.className='ecard';d.dataset.i=i;
+  d.innerHTML=`<h2><span class="ect">Emergency contact</span>${first?'':'<button type="button" class="btn ghost sm" data-rm="1">Remove</button>'}</h2>
+    <div class="grid"><div><label for="ecn${i}">Name</label><input id="ecn${i}" data-f="name"></div>
+    <div><label for="ecr${i}">Relationship</label><input id="ecr${i}" data-f="rel" placeholder="e.g. Spouse"></div>
+    <div class="full"><label for="ecp${i}">Phone number</label><input id="ecp${i}" data-f="phone" type="tel" autocomplete="tel"></div></div>`;
+  $('ecList').appendChild(d);numEc();if(!first)d.querySelector('input').focus()}
+function numEc(){[...$('ecList').children].forEach((d,k)=>d.querySelector('.ect').textContent='Emergency contact '+(k+1))}
+$('addEc').onclick=addEc;
+$('ecList').onclick=e=>{if(e.target.dataset.rm){e.target.closest('.ecard').remove();numEc()}};
+addEc();
+const getEc=()=>[...$('ecList').children].map(d=>({name:d.querySelector('[data-f=name]').value.trim(),rel:d.querySelector('[data-f=rel]').value.trim(),phone:d.querySelector('[data-f=phone]').value.trim()}));
+$('n2').onclick=()=>{
+  const cs=getEc();
+  if(!cs[0].name||!cs[0].phone){$('err2').textContent='Please enter your first emergency contact’s name and phone number.';return}
+  if(cs.some(c=>(c.name||c.phone)&&!(c.name&&c.phone))){$('err2').textContent='Each extra contact needs both a name and a phone number, or remove it.';return}
+  $('err2').textContent='';go('pg-sym')};
+$('chips').innerHTML=SYMS.map(s=>`<button type="button" aria-pressed="false" data-s="${esc(s)}">${esc(s)}</button>`).join('');
+$('chips').onclick=e=>{const s=e.target.dataset.s;if(!s)return;
+  if(sel[s]){delete sel[s];e.target.setAttribute('aria-pressed','false')}else{sel[s]=3;e.target.setAttribute('aria-pressed','true')}drawSel()};
+function drawSel(){
+  const k=Object.keys(sel);
+  $('sel').innerHTML=k.length?k.map(s=>`<div class="srow"><b>${esc(s)}</b><div class="scale" role="radiogroup" aria-label="Severity of ${esc(s)}">${[1,2,3,4,5].map(n=>`<button type="button" role="radio" aria-checked="${sel[s]===n}" data-sev="${n}" data-sym="${esc(s)}" aria-label="${n}">${n}</button>`).join('')}</div></div>`).join(''):'<p class="meta" style="margin:8px 0 0">Nothing selected yet.</p>'}
+$('sel').onclick=e=>{const b=e.target.closest('[data-sev]');if(!b)return;sel[b.dataset.sym]=+b.dataset.sev;drawSel()};
+drawSel();
+$('n3').onclick=()=>{
+  if(!Object.keys(sel).length&&!$('desc').value.trim()){$('err3').textContent='Select at least one symptom or describe what’s happening.';return}
+  $('err3').textContent='';go('pg-ins')};
+/* ---------- insurance: background discovery, never blocks ---------- */
+let D={key:'',state:'idle',timer:null,plan:null},INS={confirmed:false};
+const insShow=ids=>['insSearch','insFound','insDone','insManual'].forEach(i=>$(i).classList.toggle('hidden',!ids.includes(i)));
+function demoDiscovery(){ /* stands in for POST /insurance-discovery/check/v1 on your backend */
+  return new Promise(res=>setTimeout(()=>res($('noMatch').checked?null:{plan:'Sample Health Plan (PPO)',member:'SHP-482915763',group:'G-10442'}),4000))}
+function startDiscovery(){
+  const key=[$('fn').value,$('ln').value,$('dob').value,$('zip').value].map(x=>x.trim().toLowerCase()).join('|');
+  if(key===D.key&&D.state!=='idle')return;
+  D.key=key;D.state='searching';D.plan=null;INS.confirmed=false;insShow(['insSearch']);updFinish();
+  const mine=key;
+  demoDiscovery().then(r=>{
+    if(D.key!==mine)return;
+    if(r){D.state='found';D.plan=r;
+      $('insFoundDl').innerHTML=[['Plan',r.plan],['Member ID',r.member],['Group',r.group]].map(x=>`<dt>${x[0]}</dt><dd>${esc(x[1])}</dd>`).join('');
+      insShow(['insFound'])}
+    else{D.state='none';notFound('We couldn’t find your insurance automatically. You can add it below, or skip for now.')}})}
+function notFound(why){$('insWhy').textContent=why;insShow(['insManual'])}
+$('insYes').onclick=()=>{INS.confirmed=true;$('ins').value=D.plan.plan;$('mid').value=D.plan.member;
+  $('insDone').innerHTML='<b>Insurance added:</b> '+esc(D.plan.plan)+'. Registration will confirm your coverage in the background. <span class="meta">(demo)</span>';insShow(['insDone']);updFinish()};
+$('insNo').onclick=()=>{D.state='rejected';notFound('No problem. Add your insurance card below, or skip for now.')};
+const updFinish=()=>{$('n4').textContent=(INS.confirmed||$('ins').value.trim()||$('mid').value.trim())?'Finish check-in':'Skip for now and finish check-in'};
+$('ins').oninput=$('mid').oninput=updFinish;
+/* insurance card capture (photo only; reading the card needs a backend OCR service) */
+let cstream=null;
+function stopCard(){if(cstream){cstream.getTracks().forEach(t=>t.stop());cstream=null}$('cardVid').srcObject=null;$('cardBox').classList.add('hidden')}
+function cardPhoto(url){
+  $('cardThumb').src=url;$('cardThumb').classList.remove('hidden');
+  $('cardSt').textContent='Reading your card…';
+  setTimeout(()=>{ /* demo only: a real build sends the photo to an OCR service (e.g. Textract) and fills what it returns */
+    if(!$('ins').value.trim())$('ins').value='Sample Health Plan (demo)';if(!$('mid').value.trim())$('mid').value='SHP-482915763';
+    $('cardSt').textContent='Card photo added. In this demo we filled sample details. Please check them and fix anything wrong.';updFinish()},1500)}
+$('cardUp').onclick=()=>$('cardFile').click();
+$('cardFile').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const fr=new FileReader();fr.onload=()=>cardPhoto(fr.result);fr.readAsDataURL(f)};
+$('cardCam').onclick=async()=>{
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$('cardSt').textContent='This browser can’t use the camera here. Please upload a photo.';return}
+  try{cstream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});const v=$('cardVid');v.srcObject=cstream;await v.play();$('cardBox').classList.remove('hidden');$('cardSt').textContent='Fit the front of your card in view, then tap Take photo.'}
+  catch(e){stopCard();$('cardSt').textContent='We couldn’t open your camera ('+((e&&e.name)||'blocked')+'). Please upload a photo instead.'}};
+$('cardSnap').onclick=()=>{const v=$('cardVid');if(!v.videoWidth)return;const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);stopCard();cardPhoto(c.toDataURL('image/jpeg',.9))};
+$('cardClose').onclick=stopCard;
+
+/* ---------- submit, wait page, chat ---------- */
+function acuity(){const v=Object.entries(sel);
+  if(v.some(([s,n])=>n===5||(HIGH.includes(s)&&n>=4)))return'high';if(v.some(([,n])=>n>=4)||v.some(([s])=>HIGH.includes(s)))return'mid';return'low'}
+$('n4').onclick=()=>{
+  const nm=[$('fn').value,$('mn').value,$('ln').value].map(x=>x.trim()).filter(Boolean).join(' ');
+  P={name:nm,insurance:{provider:$('ins').value.trim(),member:$('mid').value.trim(),confirmed:INS.confirmed},contacts:getEc().filter(c=>c.name&&c.phone),first:$('fn').value.trim(),sel:{...sel},desc:$('desc').value.trim(),allergies:$('all').value||'None reported',meds:$('med').value||'None reported',a:acuity()};
+  ahead0={high:1,mid:4,low:7}[P.a];est0={high:10,mid:35,low:70}[P.a]+ahead0*2;
+  sim=0;nextCheck=900;called=false;msgs=[];alerts=[];qi=0;updBadge();
+  $('hello').textContent='You’re checked in, '+P.first+'.';
+  const sy=Object.entries(P.sel).map(([s,n])=>s+' ('+n+'/5)').join(', ');
+  $('sum').innerHTML=[['Symptoms',sy||'—'],['Notes',P.desc||'—'],['Allergies',P.allergies],['Medications',P.meds]].map(r=>`<dt>${r[0]}</dt><dd>${esc(r[1])}</dd>`).join('');
+  go('pg-wait');
+  bot('Hi '+P.first+', thanks for checking in. I’ll ask how you’re feeling every 15 minutes. You can message us any time if your symptoms change.');
+  tick();clearInterval(timer);timer=setInterval(()=>{sim+=speed;tick()},1000)};
+const remaining=()=>Math.max(0,est0-sim/60);
+function tick(){
+  const r=remaining(),ah=called?0:Math.ceil(ahead0*r/est0);
+  $('aheadN').textContent=ah;$('aheadL').textContent=ah===1?'person':'people';
+  $('track').innerHTML=Array(ah).fill('<span class="dot"></span>').join('')+'<span class="me">You</span>';
+  $('estMin').textContent=called?'Now':'about '+Math.ceil(r)+' min';
+  $('estRange').textContent=called?'':'(between '+Math.max(0,Math.floor(r*.85))+' and '+Math.ceil(r*1.2+5)+')';
+  if(r<=0&&!called){called=true;bot('A nurse is ready for you. Please come to the triage desk.');tick()}
+  $('next15').textContent='Next check-in in '+Math.ceil(Math.max(0,nextCheck-sim)/60)+' min';
+  if(sim>=nextCheck){nextCheck+=900;checkin()}}
+function checkin(){
+  const ks=Object.keys(P.sel).sort((a,b)=>P.sel[b]-P.sel[a]);
+  const ask=ks.length?(Q[ks[qi%ks.length]]||'is your '+ks[qi%ks.length].toLowerCase()+' getting worse'):'are you feeling worse';
+  qi++;
+  bot('It’s been 15 minutes, '+P.first+'. '+ask.charAt(0).toUpperCase()+ask.slice(1)+'? Or have you noticed any new symptoms?');
+  $('quick').innerHTML='<button class="btn ghost sm" data-q="Getting worse">Getting worse</button><button class="btn ghost sm" data-q="New symptom">New symptom</button><button class="btn ghost sm" data-q="No change">No change</button>'}
+$('quick').onclick=e=>{const q=e.target.dataset.q;if(q)send(q)};
+$('skip').onclick=()=>{sim=nextCheck;tick()};
+$('fast').onchange=e=>speed=e.target.checked?60:1;
+const now=()=>new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+function bot(t,from){msgs.push({me:false,t,time:now(),from:from||'Care team'});draw()}
+function draw(){$('log').innerHTML=msgs.map(m=>`<div class="msg ${m.me?'me':''}"><small>${m.me?'You':esc(m.from)} · ${m.time}</small>${esc(m.t)}</div>`).join('');$('log').scrollTop=1e9}
+function send(t){
+  msgs.push({me:true,t,time:now()});$('quick').innerHTML='';draw();
+  if(t==='No change'){setTimeout(()=>bot('Thanks for letting us know. We’ll check in again in 15 minutes.'),500);return}
+  const lvl=(t==='Getting worse'||URGENT.test(t))?'urgent':'review';
+  alerts.unshift({id:Date.now(),text:t,time:now(),lvl,done:false});updBadge();
+  setTimeout(()=>bot(t==='Getting worse'||t==='New symptom'?'Thank you. I’ve alerted the staff. Can you tell us more about what has changed? If you feel much worse, tell a staff member right away.':'Thank you. I’ve alerted the care team and a nurse will review your update. If you feel much worse, tell a staff member right away.'),600)}
+$('sendf').onsubmit=e=>{e.preventDefault();const t=$('txt').value.trim();if(!t)return;$('txt').value='';send(t)};
+function updBadge(){const n=alerts.filter(a=>!a.done).length;$('sbadge').textContent=n;$('sbadge').classList.toggle('hidden',!n);if(!$('staff').classList.contains('hidden'))renderStaff()}
+function renderStaff(){
+  $('alerts').innerHTML=alerts.length?alerts.map(a=>`<div class="alert ${a.done?'done':''}"><b>${esc(P.name)}</b> · ${a.time}${a.lvl==='urgent'?' · <b>Urgent</b>':''}
+    <p style="margin:6px 0">“${esc(a.text)}”</p>${a.done?'<span class="meta">Acknowledged</span>':`<button class="btn sm" data-ack="${a.id}">Acknowledge and reply “On my way”</button>`}</div>`).join(''):'<p class="meta" style="margin:0">No alerts yet. Check in as a patient and send a symptom update.</p>'}
+$('alerts').onclick=e=>{const id=e.target.dataset.ack;if(!id)return;alerts.find(x=>x.id==id).done=true;bot('A nurse has seen your update and is on the way to you.','Nurse');updBadge();renderStaff()};
+renderStaff();
+</script>
+</body>
+</html>
+
+</body></html>
