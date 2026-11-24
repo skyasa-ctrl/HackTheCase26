@@ -238,3 +238,14 @@ label { font-weight: 600; font-size: .92rem; }
 
 /* weights: keep values on one line */
 .rk-weights .wv{white-space:nowrap}
+
+/* ranking: pending symptom update mini-card */
+.rk-pending{container-type:inline-size;display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .9rem;padding:.6rem .8rem;background:#fff9e8}
+.rk-pend-main{flex:1 1 16rem;min-width:0;display:flex;flex-direction:column;gap:.15rem}
+.rk-pend-label{font-size:.875rem;font-weight:700;color:var(--warn-ink)}
+.rk-pend-tag{display:inline-block;margin-left:.4rem;padding:0 .4rem;font-size:.875rem;font-weight:600;border:1px solid var(--warn-line);border-radius:999px;background:var(--warn-bg)}
+.rk-pend-sym{font-size:1rem;font-weight:400}
+.rk-pend-det{font-size:.9rem;color:var(--muted,#555)}
+.rk-pend-btns{display:flex;flex:0 0 auto;gap:.4rem;align-items:center;margin-left:auto;flex-wrap:nowrap}
+.rk-pend-btns .btn{white-space:nowrap}
+@container (max-width:520px){.rk-pend-btns{flex:1 1 100%;justify-content:flex-end}}

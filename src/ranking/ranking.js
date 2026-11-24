@@ -372,14 +372,20 @@
     pendingUpdates(p).forEach(function (x) {
       var u = x.u;
       if (u.red_flag) return;                 // red flags are handled by the alert at the top
-      h += '<div class="rk-pending"><span class="pill warn">Symptom update pending — nurse review</span> ' +
-        (u.symptoms && u.symptoms.length ? esc(u.symptoms.join(', ')) : 'no new symptoms') +
-        (u.pain != null ? ', pain ' + esc(u.pain) + '/10' : '') + (u.duration ? ', ' + esc(u.duration) : '') +
-        (u.ai_summary ? '<br><span class="ai-source"><strong>' + (u.ai_source && u.ai_source !== 'rules' ? 'AI summary (' + H.ai.sourceName(u.ai_source) + ')' : 'Keyword fallback, not AI') + ':</strong> ' + esc(u.ai_summary) + '</span>' +
-          (u.free_text ? '<br><span class="muted ai-source">Patient\'s words: "' + esc(u.free_text) + '"</span>' : '') + '<br>' : '') +
-        ' ' +
-        '<button type="button" class="btn btn-sm btn-primary" data-act="confirm" data-id="' + esc(p.id) + '" data-i="' + x.i + '">Confirm</button> ' +
-        '<button type="button" class="btn btn-sm" data-act="dismiss" data-id="' + esc(p.id) + '" data-i="' + x.i + '">Dismiss</button></div>';
+      var syms = (u.symptoms || []).map(function (s) { s = String(s); return s.charAt(0).toUpperCase() + s.slice(1); });
+      var sev = severity(u), sevLabel = sev.charAt(0).toUpperCase() + sev.slice(1);
+      var det = [];
+      if (u.pain != null) det.push('Pain ' + esc(u.pain) + '/10');
+      if (u.duration) det.push(/^(for|since|over)\b/i.test(u.duration) ? esc(u.duration) : 'for ' + esc(u.duration));
+      h += '<div class="rk-pending"><div class="rk-pend-main">' +
+        '<div class="rk-pend-label">New symptoms · needs nurse review <span class="rk-pend-tag">' + esc(sevLabel) + '</span></div>' +
+        '<div class="rk-pend-sym">' + (syms.length ? esc(syms.join(' · ')) : 'No new symptoms') + '</div>' +
+        (det.length ? '<div class="rk-pend-det">' + det.join(' · ') + '</div>' : '') +
+        (u.ai_summary ? '<div class="rk-pend-det ai-source"><strong>' + (u.ai_source && u.ai_source !== 'rules' ? 'AI summary (' + H.ai.sourceName(u.ai_source) + ')' : 'Keyword fallback, not AI') + ':</strong> ' + esc(u.ai_summary) + '</div>' +
+          (u.free_text ? '<div class="rk-pend-det ai-source">Patient\'s words: "' + esc(u.free_text) + '"</div>' : '') : '') +
+        '</div><div class="rk-pend-btns">' +
+        '<button type="button" class="btn btn-sm btn-primary" data-act="confirm" data-id="' + esc(p.id) + '" data-i="' + x.i + '">Confirm</button>' +
+        '<button type="button" class="btn btn-sm" data-act="dismiss" data-id="' + esc(p.id) + '" data-i="' + x.i + '">Dismiss</button></div></div>';
     });
     return h;
   }
