@@ -71,7 +71,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .me{padding:4px 12px;border-radius:99px;background:var(--brand);color:var(--brand-ink);font-weight:700;font-size:.9rem}
 .chat{display:flex;flex-direction:column;height:520px;border-radius:0 0 14px 14px}
 .log{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:4px 2px}
-.msg{max-width:88%;padding:9px 13px;border-radius:14px;background:var(--bg);border:1px solid var(--line)}
+.msg{max-width:88%;padding:9px 13px;border-radius:14px;background:var(--bg);border:1px solid var(--line);white-space:pre-line}
 .msg.me{align-self:flex-end;background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
 .msg small{display:block;opacity:.7;font-size:.75rem}
 .quick{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
@@ -95,14 +95,40 @@ dt{color:var(--muted)}dd{margin:0}
 @keyframes sp{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.spin{animation:none}}
 .demo{display:flex;gap:8px;align-items:center;font-weight:400;color:var(--muted);font-size:.85rem;margin-top:14px}
 .btn:disabled{opacity:.45;cursor:not-allowed}
+.synth{background:#16242B;color:#fff;text-align:center;font-size:.85rem;padding:4px 8px;font-weight:700}
+.topr{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.toplink{font-size:.9rem;color:var(--brand);font-weight:700;text-decoration:none;border:1.5px solid var(--line);border-radius:999px;padding:6px 12px;background:#fff}
+.ai-connect{position:relative;font-size:.9rem}
+.ai-connect summary{cursor:pointer;padding:6px 12px;border:1.5px solid var(--line);border-radius:999px;list-style:none;background:#fff}
+.ai-connect summary::-webkit-details-marker{display:none}
+.ai-connect-body{position:absolute;right:0;top:2.6rem;z-index:20;width:320px;background:#fff;padding:.8rem;border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.15)}
+.ai-connect-body label{display:block;font-weight:700;margin:.2rem 0 .3rem}
+.ai-connect-body .row{display:flex;gap:6px;margin-top:6px}
+.aisrc{font-size:.85rem;color:var(--muted);margin:4px 0}
+.leavebtn{margin-top:8px}
 </style>
 </head>
 <body>
+<div class="synth" role="note">Synthetic data — demo only</div>
 <header class="top">
-  <div class="brand">Halvian Medical Center<small>Emergency Department · demo with mock data</small></div>
+  <div class="brand">Halvian Medical Center<small>Emergency Department · patient check-in (part of the Halvian ED Triage Assistant)</small></div>
+  <div class="topr">
+  <a class="toplink" href="index.html">Staff dashboard ↗</a>
+  <details class="ai-connect" id="ai-connect">
+    <summary id="ai-status">AI: not connected</summary>
+    <div class="ai-connect-body" id="ai-key-box">
+      <label for="ai-provider">AI model</label>
+      <select id="ai-provider"><option value="gemini">Gemini (Google)</option><option value="claude">Claude (Anthropic)</option></select>
+      <label for="ai-key" id="ai-key-label">Gemini API key (Google AI Studio)</label>
+      <input type="password" id="ai-key" autocomplete="off" placeholder="AIza...">
+      <div class="row"><button type="button" class="btn sm" id="ai-key-use">Connect</button><button type="button" class="btn ghost sm" id="ai-key-clear">Disconnect</button></div>
+      <p class="meta" style="margin:.5rem 0 0">Kept in this page's memory only; never saved. Without a key, clearly labelled keyword rules are used instead of AI. In production the model runs in Halvian's own cloud under a BAA.</p>
+    </div>
+  </details>
   <div class="seg" role="group" aria-label="Choose demo view">
     <button id="tabP" aria-pressed="true">Patient view</button>
     <button id="tabS" aria-pressed="false">Staff inbox<span id="sbadge" class="badge hidden">0</span></button>
+  </div>
   </div>
 </header>
 
@@ -215,6 +241,7 @@ dt{color:var(--muted)}dd{margin:0}
     <div class="progress"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
     <h1>Insurance</h1>
     <p class="lead">Step 4 of 4. Optional, and it never holds up your check-in. Registration can help you later.</p>
+    <p class="meta"><b>You will be seen whether or not you have insurance or ID.</b> Insurance is used for billing only. It is never used to decide your place in line.</p>
     <div class="panel">
       <div id="insSearch" class="insbox"><span class="spin" aria-hidden="true"></span> Looking for your insurance using the details you gave us…</div>
       <div id="insFound" class="insbox hidden">
@@ -254,7 +281,9 @@ dt{color:var(--muted)}dd{margin:0}
       <div class="log" id="log" role="log" aria-live="polite"></div>
       <div class="meta" id="next15"></div>
       <div class="quick" id="quick"></div>
-      <form class="send" id="sendf"><input id="txt" aria-label="Type an update" placeholder="Tell us if anything changes…" autocomplete="off"><button class="btn" type="submit">Send</button></form>
+      <form class="send" id="sendf"><input id="txt" aria-label="Type an update" placeholder="Tell us in your own words if anything changes…" autocomplete="off"><button class="btn" type="submit">Send</button></form>
+      <p class="aisrc" id="aisrc"></p>
+      <button class="btn ghost sm leavebtn" id="leave" type="button">I'm thinking of leaving</button>
     </div>
     <div class="panel"><h2>What you told us</h2><dl id="sum"></dl></div>
     <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:6px"><input type="checkbox" id="fast" style="width:auto"> Demo speed: 1 second = 1 minute</label>
@@ -264,11 +293,12 @@ dt{color:var(--muted)}dd{margin:0}
 
 <section id="staff" class="hidden">
   <h1>Staff inbox</h1>
-  <p class="lead">Placeholder: patient updates land here. The full staff view comes later.</p>
+  <p class="lead">Patient messages from the check-in app. AI reads each message, checks for red flags and writes a summary; a nurse decides what happens. Full queue: <a href="index.html">Staff dashboard ↗</a></p>
   <div class="panel" id="alerts"></div>
 </section>
 </main>
 
+<script src="src/shared/ai.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <script>
@@ -432,7 +462,7 @@ $('scanDemo').onclick=()=>{const d=parseAAMVA(SAMPLE);if(d){gotBack(d);msg('Samp
 
 /* ---------- form steps ---------- */
 $('n1').onclick=()=>{
-  if(['fn','ln','dob','gen','street','city','state','zip'].some(i=>!$(i).value.trim())){$('err1').textContent='Please fill in your name, date of birth, gender and address. Middle name is optional.';return}
+  if(['fn','dob'].some(i=>!$(i).value.trim())){$('err1').textContent='Please add at least your first name and date of birth. Everything else is optional, and you can also check in at the front desk.';return}
   $('err1').textContent='';startDiscovery();go('pg-ec')};
 let ecN=0;
 function addEc(){
@@ -540,18 +570,49 @@ $('fast').onchange=e=>speed=e.target.checked?60:1;
 const now=()=>new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
 function bot(t,from){msgs.push({me:false,t,time:now(),from:from||'Care team'});draw()}
 function draw(){$('log').innerHTML=msgs.map(m=>`<div class="msg ${m.me?'me':''}"><small>${m.me?'You':esc(m.from)} · ${m.time}</small>${esc(m.t)}</div>`).join('');$('log').scrollTop=1e9}
+/* AI context for this patient (no identifiers): acuity band, symptoms, age band. */
+function aiCtx(){const d=$('dob').value?new Date($('dob').value):null;const age=d?Math.floor((Date.now()-d)/3.15576e10):40;
+  return{esi:{high:2,mid:3,low:4}[P.a]||3,chief_complaint:Object.keys(P.sel||{}).join(', ')||P.desc||'not stated',age:age}}
+const AI=()=>window.Halvian&&window.Halvian.ai;
+function srcLabel(src){return src&&src!=='rules'&&src!=='template'?'AI ('+AI().sourceName(src)+')':(src==='template'?'standard template (AI not connected)':'keyword rules (AI not connected)')}
 function send(t){
   msgs.push({me:true,t,time:now()});$('quick').innerHTML='';draw();
   if(t==='No change'){setTimeout(()=>bot('Thanks for letting us know. We’ll check in again in 15 minutes.'),500);return}
-  const lvl=(t==='Getting worse'||URGENT.test(t))?'urgent':'review';
-  alerts.unshift({id:Date.now(),text:t,time:now(),lvl,done:false});updBadge();
-  setTimeout(()=>bot(t==='Getting worse'||t==='New symptom'?'Thank you. I’ve alerted the staff. Can you tell us more about what has changed? If you feel much worse, tell a staff member right away.':'Thank you. I’ve alerted the care team and a nurse will review your update. If you feel much worse, tell a staff member right away.'),600)}
+  const a={id:Date.now(),kind:'update',text:t,time:now(),lvl:(t==='Getting worse'||URGENT.test(t))?'urgent':'review',done:false,ai:null};
+  alerts.unshift(a);updBadge();
+  const quick=(t==='Getting worse'||t==='New symptom');
+  if(!AI()||quick){setTimeout(()=>bot(quick?'Thank you. I’ve alerted the staff. Can you tell us more about what has changed? If you feel much worse, tell a staff member right away.':'Thank you. I’ve alerted the care team and a nurse will review your update. If you feel much worse, tell a staff member right away.'),600);return}
+  AI().triage(t,'en',aiCtx()).then(res=>{
+    a.ai=res;if(res.red_flag)a.lvl='urgent';updBadge();
+    $('aisrc').textContent='Your message was sorted by '+srcLabel(res.source)+'. A nurse reviews every update.';
+    bot(res.red_flag?'Thank you. This could be serious, so a nurse has been alerted and is coming to check on you now. If you feel much worse, tell a staff member right away.':res.patient_reply)})}
+$('leave').onclick=()=>{
+  if(!P||!P.first)return;
+  msgs.push({me:true,t:'I’m thinking of leaving.',time:now()});draw();
+  const a={id:Date.now(),kind:'leave',text:'Patient is thinking of leaving',time:now(),lvl:'urgent',done:false,draft:'',src:'',drafting:true};
+  alerts.unshift(a);updBadge();
+  bot('Thanks for telling us. A nurse has been alerted and is preparing a plan for you. If you can, please stay: you will be seen.');
+  const go2=AI()?AI().leavePlan(aiCtx(),'en'):Promise.resolve({text:'Where to go: your regular doctor or an urgent care clinic today. Warning signs: come back or call 911 for chest pain, trouble breathing, fainting, confusion or severe bleeding. Follow-up: leave your number at the desk.',source:'template'});
+  go2.then(r=>{a.draft=r.text;a.src=r.source;a.drafting=false;updBadge();renderStaff()})};
 $('sendf').onsubmit=e=>{e.preventDefault();const t=$('txt').value.trim();if(!t)return;$('txt').value='';send(t)};
 function updBadge(){const n=alerts.filter(a=>!a.done).length;$('sbadge').textContent=n;$('sbadge').classList.toggle('hidden',!n);if(!$('staff').classList.contains('hidden'))renderStaff()}
 function renderStaff(){
-  $('alerts').innerHTML=alerts.length?alerts.map(a=>`<div class="alert ${a.done?'done':''}"><b>${esc(P.name)}</b> · ${a.time}${a.lvl==='urgent'?' · <b>Urgent</b>':''}
-    <p style="margin:6px 0">“${esc(a.text)}”</p>${a.done?'<span class="meta">Acknowledged</span>':`<button class="btn sm" data-ack="${a.id}">Acknowledge and reply “On my way”</button>`}</div>`).join(''):'<p class="meta" style="margin:0">No alerts yet. Check in as a patient and send a symptom update.</p>'}
-$('alerts').onclick=e=>{const id=e.target.dataset.ack;if(!id)return;alerts.find(x=>x.id==id).done=true;bot('A nurse has seen your update and is on the way to you.','Nurse');updBadge();renderStaff()};
+  $('alerts').innerHTML=alerts.length?alerts.map(a=>{
+    const head=`<b>${esc(P.name)}</b> · ${a.time}${a.lvl==='urgent'?' · <b>Urgent</b>':''}`;
+    if(a.kind==='leave'){
+      if(a.done)return `<div class="alert done">${head}<p style="margin:6px 0">Leave-with-a-plan message ${a.done==='talked'?'not sent: nurse talked with the patient in person':'approved and sent'}.</p><span class="meta">Done</span></div>`;
+      return `<div class="alert">${head}<p style="margin:6px 0"><b>Thinking of leaving.</b> Go and talk with the patient if you can. The patient sees this message only after you approve it.</p>`+
+        (a.drafting?'<p class="meta">Drafting the message…</p>':`<p class="aisrc"><b>Draft by ${esc(srcLabel(a.src))}.</b> Edit as needed.</p><textarea id="lv-${a.id}" rows="5">${esc(a.draft)}</textarea>
+        <p style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 0"><button class="btn sm" data-lsend="${a.id}">Approve and send to patient</button><button class="btn ghost sm" data-ltalk="${a.id}">I talked with the patient in person</button></p>`)+`</div>`}
+    const ai=a.ai?`<p class="aisrc"><b>${a.ai.source!=='rules'?'AI summary ('+esc(AI().sourceName(a.ai.source))+')':'Keyword rules, not AI'}:</b> ${esc(a.ai.nurse_summary.replace(/^Patient wrote: /,''))}${a.ai.red_flag?' · <b>Red flag'+(a.ai.red_flag_reason?': '+esc(a.ai.red_flag_reason):'')+'</b>':''}</p>`:'';
+    return `<div class="alert ${a.done?'done':''}">${head}${ai}<p style="margin:6px 0">Patient’s words: “${esc(a.text)}”</p>${a.done?'<span class="meta">Acknowledged</span>':`<button class="btn sm" data-ack="${a.id}">Acknowledge and reply “On my way”</button>`}</div>`}).join(''):'<p class="meta" style="margin:0">No alerts yet. Check in as a patient and send a symptom update.</p>'}
+$('alerts').onclick=e=>{const d=e.target.dataset,find=id=>alerts.find(x=>x.id==id);
+  if(d.ack){find(d.ack).done=true;bot('A nurse has seen your update and is on the way to you.','Nurse')}
+  else if(d.lsend){const a=find(d.lsend),txt=($('lv-'+a.id).value||'').trim();if(!txt)return;a.done='sent';
+    bot(txt+'\n\n('+(a.src&&a.src!=='template'?'Drafted by '+srcLabel(a.src)+', reviewed and approved by a nurse':'Standard hospital advice, sent by a nurse')+')','Nurse')}
+  else if(d.ltalk){find(d.ltalk).done='talked'}
+  else return;
+  updBadge();renderStaff()};
 renderStaff();
 </script>
 </body>

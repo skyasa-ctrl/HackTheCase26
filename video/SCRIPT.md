@@ -25,9 +25,10 @@
 **Pacing:** target 7:15, leaving 45 s of buffer under the 8-minute limit. One person drives the demo so there are no hand-overs of the screen. Do a timed dry run.
 
 ## Before recording the demo (2 min)
-1. Open `index.html` in Chrome, full screen, zoom 90%. Reload so the demo starts fresh.
-2. **Connect the AI:** click the **AI** pill in the header, keep **Gemini** selected, paste a Gemini API key (free from Google AI Studio), click **Connect**. The pill must read **"AI: Gemini connected"**. Never show the key on screen, and never commit it.
-3. If AI can't connect, the demo still works, but every AI screen will say "keyword rules, not AI". In that case, say so out loud rather than calling it AI.
+1. Open `index.html` in Chrome, full screen, zoom 110–125% so text is readable on video. Reload so the demo starts fresh.
+2. **Connect the AI on the patient check-in page:** open `ED Patient Flow – Mock.html` (or click **Patient check-in ↗** in the dashboard header). Click the **AI** pill, keep **Gemini** selected, paste a Gemini API key (free from Google AI Studio), click **Connect**. The pill must read **"AI: connected (Gemini)"**. The key lives in that page only, so connect it there.
+3. **Check in a demo patient before recording:** tap **Check in**, skip the license scan, enter a first name (e.g. Mateo) and date of birth, pick **Pain** and type "twisted my ankle", skip insurance, and finish. Leave this tab open on the chat screen. Never show the key on screen, and never commit it.
+4. If AI can't connect, the demo still works, but every AI screen will say "keyword rules, not AI". In that case, say so out loud rather than calling it AI.
 
 ## Demo click-path (≈90 s). Practice twice.
 
@@ -36,11 +37,11 @@
 2. On an ESI-3 row, click **Show reasoning**: "Every score shows exactly why: wait over target, abnormal vitals, overdue re-check."
 3. Click **Pin to top** on a row → reason *Clinical judgment* → **Save override**: "The nurse is always in charge, and every override is logged."
 
-**Patient view + AI (30 s)**
-4. Click **Patient view**, choose a waiting ESI 4 patient, switch language to **Español**.
-5. In **"Describe it in your own words"**, type: *me duele más el tobillo y ahora siento el pecho apretado*. Click **Send**. "Gemini reads the patient's own words, in any language. It flags possible chest symptoms, and a keyword safety net checks too, so either can page a nurse."
-6. Click **I'm thinking of leaving**. "Gemini drafts a leave-with-a-plan message in Spanish. The patient only sees it after a nurse approves it."
-7. Back on **Queue**: point at the red **Nurse paged** banner, which shows the AI summary next to the patient's words. In the **Thinking of leaving** card, edit one word of the draft, then click **Approve and send to patient**. "A nurse checks every word that reaches the patient."
+**Patient check-in + AI (30 s)** (switch to the check-in tab)
+4. "This is the patient's side of the same tool: what Mateo sees on his phone or the waiting-room kiosk. He can be seen with or without ID or insurance."
+5. In the chat box, type: *my ankle hurts more and now my chest feels tight*. Click **Send**. "Gemini reads Mateo's own words, spots possible chest symptoms and alerts a nurse. A keyword safety net checks too, so either can raise the alarm."
+6. Click **I'm thinking of leaving**. "Gemini drafts a leave-with-a-plan message. Mateo only sees it after a nurse approves it."
+7. Click **Staff inbox**: point at the **Red flag** with the AI summary next to Mateo's own words. In the leaving card, edit one word, click **Approve and send to patient**, then click **Patient view** to show the approved message. "A nurse checks every word that reaches the patient. In production, these alerts land in the same queue you just saw."
 
 **Fast-track (15 s)**
 8. Click **Fast-track**. Point at the right-hand **AI suggestions**: "Send next, video-consult candidates, and near-misses for review, all generated from the model's scores and live room status." Click **Why?** on a row → **Accept**. "An explainable eligibility score; eligible patients are ordered longest-wait first, so it stays fair. These accuracy numbers are on synthetic data; we re-test on Halvian's own data in silent mode before go-live."

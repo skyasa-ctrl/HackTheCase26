@@ -7,10 +7,16 @@
   <link rel="stylesheet" href="src/shared/styles.css">
 </head>
 <body>
+  <div class="banner-synthetic" role="note">Synthetic data — demo only</div>
   <div class="app-top">
   <header class="app-header">
     <h1>Halvian ED Triage Assistant</h1>
     <span class="spacer"></span>
+    <a class="patient-link" href="ED%20Patient%20Flow%20%E2%80%93%20Mock.html">Patient check-in ↗</a>
+    <label class="switch" for="ai-offline-toggle" title="Simulates the AI being unavailable: suggestions pause and the queue falls back to acuity, then arrival time.">
+      <input type="checkbox" id="ai-offline-toggle" role="switch">
+      <span>AI offline</span>
+    </label>
     <details class="ai-connect" id="ai-connect">
       <summary id="ai-status" data-state="none" title="Without a key, simple keyword rules are used instead of AI. In production, the model runs inside Halvian's own cloud under a BAA.">AI: not connected</summary>
       <div class="ai-connect-body" id="ai-key-box">
