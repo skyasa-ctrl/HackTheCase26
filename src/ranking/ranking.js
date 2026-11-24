@@ -144,10 +144,9 @@
   }
 
   /* ---------- ranking ---------- */
-  /** Returns {ranked:[{p,s,rank,key}], fast:[p]}. Order is ESI first, always; score only reorders inside an ESI group. */
+  /** Returns {ranked:[{p,s,rank,key}]}. Order is ESI first, always; score only reorders inside an ESI group. */
   function computeQueue() {
     var waiting = H.state.patients.filter(function (p) { return p.status === 'waiting'; });
-    var fast = H.state.patients.filter(function (p) { return p.status === 'fast-track'; }).sort(U.esiArrivalCompare);
     var offline = H.state.aiOffline, avgs = esiAverages(waiting);
     var rows = waiting.map(function (p) {
       var s = scorePatient(p, avgs);
@@ -159,7 +158,7 @@
         (new Date(a.p.arrival_time) - new Date(b.p.arrival_time));
     });
     rows.forEach(function (r, i) { r.rank = i + 1; });
-    return { ranked: rows, fast: fast, avgs: avgs };
+    return { ranked: rows, avgs: avgs };
   }
 
   /* ---------- rendering ---------- */
@@ -178,7 +177,7 @@
       '.rk-sumbar span{font-size:.82rem;color:var(--muted);font-weight:600}' +
       '.rk-sumbar li.hot{border-color:var(--danger);background:#fde4e4}.rk-sumbar li.hot b,.rk-sumbar li.hot span{color:#7a1a1f}' +
       '.rk-sumbar li.warm{border-color:var(--warn-line);background:var(--warn-bg)}' +
-      '.rk-row.pinned{border-left:5px solid var(--brand)}.rk-row.rk-grey{opacity:.7;background:#f0f3f6}' +
+      '.rk-row.pinned{border-left:5px solid var(--brand)}' +
       '.rk-head{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .8rem}' +
       '.rk-rank{font-weight:700;font-size:1.1rem;min-width:2rem;color:var(--brand-dark)}' +
       '.rk-main{flex:1 1 14rem;min-width:12rem}.rk-score{font-weight:700;font-size:1.05rem;flex:0 0 4.5rem;text-align:right;font-variant-numeric:tabular-nums}' +
@@ -224,7 +223,6 @@
       '<p class="muted" id="rk-w-last" role="status" aria-live="polite"></p></div></details></div>' +
       '<div class="rk-grid"><div>' +
       '<div class="card"><h2>Ranked waiting list</h2><p class="muted" id="rk-sub"></p><div id="rk-msg" class="sr-only" aria-live="polite"></div><div id="rk-list"></div></div>' +
-      '<div class="card"><details id="rk-fast-box"><summary class="rk-summary" id="rk-fast-sum">Fast-track (not ranked here)</summary><div id="rk-fast"></div></details></div>' +
       '</div><div>' +
       '<div class="card"><details class="rk-logbox" id="rk-logbox"><summary class="rk-summary">Override log <span class="pill" id="rk-log-n">0</span></summary><div id="rk-log"></div></details></div>' +
       '</div></div>' +
@@ -292,7 +290,7 @@
       h += '<p class="rk-flag-line">' + (u.ai_summary ? (u.ai_source && u.ai_source !== 'rules' ? 'AI summary (' + H.ai.sourceName(u.ai_source) + '): ' : 'Patient wrote: ') + esc(u.ai_summary.replace(/^Patient wrote: /, '')) : '') +
         (u.red_flag_reason ? ' <span class="muted">(' + esc(u.red_flag_reason) + ')</span>' : '') + '</p>';
     }
-    h += '<p class="rk-flag-help">Red flags skip scoring — assess now.</p></div>' +
+    h += '</div>' +
       '<div class="rk-flag-actions"><button type="button" class="btn btn-danger" data-act="ack" data-id="' + id + '" data-i="' + f.i + '">Mark assessed</button>' +
       '<button type="button" class="btn" data-act="show-row" data-id="' + id + '">Show in queue</button></div></article>';
     return h;
@@ -443,13 +441,6 @@
       html += rowHtml(r, { first: !prev || prev.p.esi !== r.p.esi, last: !next || next.p.esi !== r.p.esi });
     });
     root.querySelector('#rk-list').innerHTML = html;
-    var fh = '';
-    q.fast.forEach(function (p) {
-      fh += '<div class="rk-row rk-grey"><div class="rk-head"><span class="badge esi-' + esc(p.esi) + '">ESI ' + esc(p.esi) + '</span><div class="rk-main"><strong>' +
-        esc(p.id) + '</strong> · ' + esc(p.chief_complaint) + '<div class="muted">Waiting ' + waitMin(p) + ' min · in fast-track stream</div></div></div></div>';
-    });
-    root.querySelector('#rk-fast').innerHTML = fh || '<p class="muted">No patients in fast-track.</p>';
-    root.querySelector('#rk-fast-sum').textContent = 'Fast-track patients, greyed and not ranked here (' + q.fast.length + ')';
     return q;
   }
 

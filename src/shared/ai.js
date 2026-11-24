@@ -83,8 +83,8 @@
 
   function label() {
     var m = mode();
-    return m === 'api' ? 'AI: ' + NAMES[provider] + ' connected' : m === 'artifact' ? 'AI: Claude connected (artifact)' :
-      m === 'offline' ? 'AI: offline (switched off)' : 'AI: not connected (rules fallback)';
+    return m === 'api' ? 'AI: connected (' + NAMES[provider] + ')' : m === 'artifact' ? 'AI: connected (Claude)' :
+      m === 'offline' ? 'AI: offline' : 'AI: not connected';
   }
 
   function geminiCall(model, prompt) {
@@ -214,7 +214,7 @@
     var input = document.getElementById('ai-key'), use = document.getElementById('ai-key-use'), clear = document.getElementById('ai-key-clear');
     var sel = document.getElementById('ai-provider'), lab = document.getElementById('ai-key-label');
     function paint() {
-      if (status) status.textContent = label();
+      if (status) { status.textContent = label(); var md = mode(); status.setAttribute('data-state', md === 'artifact' ? 'api' : md); }
       if (sel) sel.value = provider;
       if (lab) lab.textContent = provider === 'gemini' ? 'Gemini API key (Google AI Studio)' : 'Anthropic API key';
       if (input) input.placeholder = provider === 'gemini' ? 'AIza...' : 'sk-ant-...';
