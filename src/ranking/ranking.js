@@ -47,6 +47,8 @@
     symSevere: function (v) { return '+' + pts(v); }, symMild: function (v) { return '+' + pts(v); },
     painCap: function (v) { return 'max ' + pts(v); }
   };
+  var REFRESH_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>';
+  var GEAR_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
   var BAR_SCALE = 25;                                         // points that fill a bar
 
   var weights = {}, savedWeights = {}, lastWeightChange = null;
@@ -55,6 +57,260 @@
   /* nurse overrides (session only): pin flag and a score bias used to place a row within its ESI group */
   var pins = {}, bias = {};
   var expanded = {}, pending = null, root = null, lastMsg = '';
+
+  /* nurse assignments (session only): patient id -> nurse id. Assigning never changes a patient's ESI or status. */
+  var assign = {}, nurseList = null, dragId = null, profileId = null;
+  var sugg = {}, suggMeta = { time: null, why: '' }, lastWaitIds = null;
+
+  /* Clinical areas used to match a patient to a nurse. Matching is by keyword on the complaint, symptoms and age. */
+  var TAGS = {
+    cardiac:     { label: 'Cardiac', re: /cardi|chest|heart|palpit|arrhythm/i },
+    respiratory: { label: 'Respiratory', re: /respir|breath|asthma|copd|pulmon|pneumon|wheez|cough/i },
+    trauma:      { label: 'Trauma / injury', re: /trauma|injur|fractur|ortho|lacerat|wound|fall\b|fell|accident|bleed|sprain/i },
+    neuro:       { label: 'Neuro', re: /neuro|head|stroke|seiz|dizz|numb|confus|faint|syncop/i },
+    abdominal:   { label: 'Abdominal / GI', re: /abdom|\bgi\b|stomach|vomit|nause|diarr|gastro|belly/i },
+    infection:   { label: 'Infection / fever', re: /infect|fever|sepsis|rash|skin|cellulit|sore throat|urinary/i },
+    pediatric:   { label: 'Pediatrics', re: /pediat|paediat|child|infant/i },
+    geriatric:   { label: 'Older adults', re: /geriat|older|elder/i }
+  };
+  var DEMO_NURSES = [
+    { name: 'Nurse Adams', role: 'Staff RN', years: 12, specialties: ['cardiac', 'geriatric'], focus: 'Chest pain, arrhythmia, older adults' },
+    { name: 'Nurse Brooks', role: 'Staff RN', years: 8, specialties: ['trauma', 'neuro'], focus: 'Injuries, fractures, head trauma' },
+    { name: 'Nurse Chen', role: 'Charge RN', years: 15, specialties: ['respiratory', 'infection'], focus: 'Asthma, COPD, pneumonia, fever' },
+    { name: 'Nurse Diaz', role: 'Staff RN', years: 5, specialties: ['pediatric', 'abdominal'], focus: 'Children, abdominal pain, vomiting' },
+    { name: 'Nurse Evans', role: 'Float RN', years: 3, specialties: ['abdominal', 'infection'], focus: 'General medicine, GI, minor infections' }
+  ];
+  function tagsFromText(t) {
+    t = String(t || '');
+    return Object.keys(TAGS).filter(function (k) { return TAGS[k].re.test(t) || t.toLowerCase().indexOf(k) >= 0; });
+  }
+  function tagLabel(k) { return TAGS[k] ? TAGS[k].label : String(k).charAt(0).toUpperCase() + String(k).slice(1); }
+  function toList(v) { return Array.isArray(v) ? v.map(String) : (v ? String(v).split(/[,;/]+/).map(function (x) { return x.trim(); }).filter(Boolean) : []); }
+  function profile(base, demo, id) {
+    var specs = toList(base.specialties || base.specialty || base.specialities), years = base.years != null ? base.years : base.experience_years;
+    var d = demo || {};
+    if (!specs.length) specs = d.specialties || [];
+    var focus = base.focus || base.focus_area || d.focus || '';
+    return { id: id, name: base.name, role: base.role || d.role || 'RN', years: years != null ? years : (d.years != null ? d.years : null),
+      specialties: specs, focus: focus, tags: tagsFromText(specs.join(' ') + ' ' + focus) };
+  }
+  function roster() {
+    if (nurseList) return nurseList;
+    var src = H.state.nurses, out = [];
+    if (Array.isArray(src) && src.length) {
+      out = src.map(function (n, i) {
+        var o = typeof n === 'string' ? { name: n } : n;
+        return profile({ name: o.name || String(o.id), specialties: o.specialties, specialty: o.specialty, years: o.years, experience_years: o.experience_years, role: o.role, focus: o.focus, focus_area: o.focus_area },
+          DEMO_NURSES[i % DEMO_NURSES.length], String(o && o.id != null ? o.id : 'n' + i));
+      });
+    } else {
+      out = DEMO_NURSES.map(function (d, i) { return profile(d, d, 'n' + i); });
+      var cur = H.state.settings && H.state.settings.nurse;
+      if (cur && !out.some(function (n) { return n.name === cur; })) out.unshift(profile({ name: cur, role: 'Charge RN', years: 10, focus: 'Charge nurse, all areas' }, null, 'nc'));
+    }
+    nurseList = out;
+    return out;
+  }
+
+  /* ---------- nurse suggestions ----------
+     Rules score every patient/nurse pair (specialty match, experience for sicker patients, current workload, acuity balance).
+     If the AI connection offers H.ai.explainAssignments, it only rewrites the wording; the pick itself is always the rules'.
+     Suggestions are advice only: a nurse still clicks Assign or drags the patient. */
+  function patientTags(p) {
+    var syms = [].concat(p.symptoms || []);
+    (p.symptom_updates || []).forEach(function (u) { syms = syms.concat(u.symptoms || []); });
+    var t = tagsFromText((p.chief_complaint || '') + ' ' + syms.join(' '));
+    if (p.age != null && p.age < 18 && t.indexOf('pediatric') < 0) t.push('pediatric');
+    if (p.age != null && p.age >= 65 && t.indexOf('geriatric') < 0) t.push('geriatric');
+    return t;
+  }
+  function riskWord(p) { return p.esi <= 2 ? 'High risk' : p.esi === 3 ? 'Medium risk' : 'Low risk'; }
+  function loadWords(k) { return k === 0 ? 'has no patients right now' : 'has ' + k + (k === 1 ? ' patient' : ' patients') + ' right now'; }
+  function fitFor(p, n, load, hi, ptags) {
+    var shared = n.tags.filter(function (t) { return ptags.indexOf(t) >= 0; });
+    var yrs = n.years || 0, sick = p.esi <= 2;
+    var score = Math.min(shared.length, 2) * 35 + Math.min(yrs, 15) * (sick ? 1.2 : 0.4) - load * 14 - hi * (sick ? 10 : 4) + (load === 0 ? 12 : 0);
+    return { n: n, score: score, shared: shared, load: load };
+  }
+  function reasonFor(p, f) {
+    var n = f.n, head = riskWord(p) + ' (ESI ' + p.esi + '): ', yrs = n.years != null ? n.years + ' years' : null;
+    if (f.shared.length) {
+      return head + n.name + ' specializes in ' + f.shared.map(tagLabel).join(' and ') + (yrs ? ' (' + yrs + ')' : '') + ', which fits ' +
+        (p.chief_complaint ? String(p.chief_complaint).toLowerCase() : 'this patient') + ', and ' + loadWords(f.load) + '.';
+    }
+    return head + 'no one on shift is a close specialty match, so ' + n.name + ' ' + loadWords(f.load) + (p.esi <= 2 && yrs ? ' and has ' + yrs + ' of experience' : '') + '.';
+  }
+  function computeSuggestions(full) {
+    cleanAssign();
+    var ros = roster(), load = {}, hi = {}, waitingIds = {}, ranked = computeQueue().ranked.map(function (r) { return r.p; });
+    ros.forEach(function (n) { load[n.id] = 0; hi[n.id] = 0; });
+    Object.keys(assign).forEach(function (pid) {
+      var p = H.getPatient(pid), nid = assign[pid];
+      if (load[nid] != null) { load[nid]++; if (p && p.esi <= 2) hi[nid]++; }
+    });
+    ranked.forEach(function (p) { waitingIds[p.id] = true; });
+    Object.keys(sugg).forEach(function (pid) { if (full || !waitingIds[pid] || assign[pid] || !nurseById(sugg[pid].nurseId)) delete sugg[pid]; });
+    ranked.forEach(function (p) { var sg = sugg[p.id]; if (sg) { load[sg.nurseId]++; if (p.esi <= 2) hi[sg.nurseId]++; } });
+    var fresh = [];
+    ranked.forEach(function (p) {
+      if (sugg[p.id]) return;
+      var ptags = patientTags(p), fits = ros.map(function (n) { return fitFor(p, n, load[n.id], hi[n.id], ptags); });
+      fits.sort(function (a, b) { return (b.score - a.score) || (a.load - b.load); });
+      var best = fits[0];
+      if (!best) return;
+      sugg[p.id] = { nurseId: best.n.id, score: Math.round(best.score), text: reasonFor(p, best), source: 'rules', shared: best.shared };
+      load[best.n.id]++; if (p.esi <= 2) hi[best.n.id]++;
+      fresh.push(p);
+    });
+    if (full) suggMeta.time = U.fmtTime(U.now());
+    if (fresh.length) aiReword(fresh);
+  }
+  function aiReword(list) {
+    if (H.state.aiOffline || !H.ai || typeof H.ai.explainAssignments !== 'function') return;
+    var items = list.map(function (p) {
+      var sg = sugg[p.id], n = nurseById(sg.nurseId);
+      return { patient_id: p.id, age: p.age, sex: p.sex, esi: p.esi, complaint: p.chief_complaint, symptoms: p.symptoms || [],   // no name or address is sent
+        suggested_nurse: { name: n.name, years: n.years, specialties: n.specialties, focus: n.focus }, rule_reason: sg.text };
+    });
+    try {
+      Promise.resolve(H.ai.explainAssignments(items)).then(function (res) {
+        var changed = false;
+        Object.keys(res || {}).forEach(function (pid) {
+          var sg = sugg[pid];
+          if (sg && typeof res[pid] === 'string' && res[pid].trim()) { sg.text = res[pid].trim(); sg.source = 'ai'; changed = true; }
+        });
+        if (changed) refresh();
+      }).catch(function () {});
+    } catch (e) { /* keep the rule-based wording */ }
+  }
+  /* Full re-run when a patient has left the waiting list (served, roomed, sent to fast-track); otherwise only new arrivals get a suggestion. */
+  function syncSuggestions() {
+    var wait = H.state.patients.filter(function (p) { return p.status === 'waiting'; }).map(function (p) { return p.id; });
+    var gone = lastWaitIds ? lastWaitIds.filter(function (id) { return wait.indexOf(id) < 0; }) : [];
+    lastWaitIds = wait;
+    if (gone.length) suggMeta.why = ' after ' + gone.join(', ') + ' left the queue';
+    computeSuggestions(!suggMeta.time || gone.length > 0);
+  }
+  var suggOpen = null, openEsi = {}, openSec = {};   // everything starts closed
+  function suggHtml(p) {
+    var sg = sugg[p.id], n = sg && !assign[p.id] ? nurseById(sg.nurseId) : null;
+    if (!n) return '';
+    var open = suggOpen === p.id, id = esc(p.id), h;
+    h = '<div class="rk-suggwrap"><button type="button" class="rk-suggchip" data-act="sugg-why" data-id="' + id + '" aria-expanded="' + open + '" aria-haspopup="dialog" title="Why this nurse?">' +
+      '<span aria-hidden="true">✦</span> ' + esc(n.name) + '</button>';
+    if (open) {
+      var mine = patientsOf(n.id).length;
+      h += '<div class="rk-pop" role="dialog" aria-label="Why ' + esc(n.name) + ' is suggested for ' + id + '">' +
+        '<div class="rk-pop-h"><strong>' + (sg.source === 'ai' ? 'AI suggestion' : 'Suggested') + ': ' + esc(n.name) + '</strong>' +
+        '<button type="button" class="btn btn-sm" data-act="sugg-close" aria-label="Close">✕</button></div>' +
+        '<p>' + esc(sg.text) + '</p>' +
+        '<p class="muted">' + esc(n.role) + (n.years != null ? ' · ' + esc(n.years) + ' yrs' : '') + ' · ' + mine + (mine === 1 ? ' patient' : ' patients') + ' now' +
+        (n.specialties.length ? ' · ' + esc(n.specialties.map(tagLabel).join(', ')) : '') + '</p>' +
+        (sg.source === 'ai' ? '' : '<p class="muted">Rule-based match. Advice only.</p>') +
+        '<div class="row"><button type="button" class="btn btn-sm btn-primary" data-act="accept-sugg" data-id="' + id + '">Assign to ' + esc(n.name) + '</button></div></div>';
+    }
+    return h + '</div>';
+  }
+
+  /* ---------- nurse profile ---------- */
+  function patientsOf(nid) {
+    return Object.keys(assign).filter(function (id) { return assign[id] === nid; }).map(function (id) { return H.getPatient(id); }).filter(Boolean).sort(U.esiArrivalCompare);
+  }
+  function renderProfile() {
+    var dlg = root && root.querySelector('#rk-ndlg'), n = profileId && nurseById(profileId);
+    if (!dlg) return;
+    if (!n) { closeProfile(); return; }
+    var mine = patientsOf(n.id), sug = Object.keys(sugg).filter(function (pid) { return sugg[pid].nurseId === n.id && !assign[pid]; })
+      .map(function (pid) { return H.getPatient(pid); }).filter(Boolean).sort(U.esiArrivalCompare);
+    var h = '<div class="rk-dlg-head"><div><h2 id="rk-n-t" style="margin:0">' + esc(n.name) + '</h2><p class="muted" style="margin:.2rem 0 0">' + esc(n.role) +
+      (n.years != null ? ' · ' + esc(n.years) + ' years experience' : '') + ' · ' + mine.length + (mine.length === 1 ? ' patient' : ' patients') + ' now</p></div>' +
+      '<button type="button" class="btn btn-sm" data-act="nurse-close" aria-label="Close nurse profile">✕</button></div>' +
+      '<h3 class="rk-ph">Specialty and focus</h3><div class="rk-chips">' +
+      (n.specialties.length ? n.specialties.map(function (t) { return '<span class="pill">' + esc(tagLabel(t)) + '</span>'; }).join('') : '<span class="muted">Not listed</span>') + '</div>' +
+      (n.focus ? '<p class="muted" style="margin:.4rem 0 0">Focus area: ' + esc(n.focus) + '</p>' : '') +
+      '<h3 class="rk-ph">Currently attending (' + mine.length + ')</h3>';
+    if (!mine.length) h += '<p class="muted">No patients right now.</p>';
+    mine.forEach(function (p) {
+      h += '<div class="rk-prow"><span class="badge esi-' + esc(p.esi) + '">ESI ' + esc(p.esi) + '</span><div class="rk-main"><strong>' + esc(p.id) + '</strong> · ' + esc(p.age) + esc(p.sex) + ' · ' + esc(p.chief_complaint) +
+        '<div class="muted">Waiting ' + waitMin(p) + ' min</div></div><button type="button" class="btn btn-sm" data-act="unassign" data-id="' + esc(p.id) + '">Unassign</button></div>';
+    });
+    h += '<h3 class="rk-ph">Suggested for ' + esc(n.name) + ' (' + sug.length + ')</h3>';
+    if (!sug.length) h += '<p class="muted">No waiting patients are matched to this nurse right now.</p>';
+    sug.forEach(function (p) {
+      h += '<div class="rk-prow"><span class="badge esi-' + esc(p.esi) + '">ESI ' + esc(p.esi) + '</span><div class="rk-main"><strong>' + esc(p.id) + '</strong> · ' + esc(p.chief_complaint) +
+        '<div class="muted">' + esc(sugg[p.id].text) + '</div></div><button type="button" class="btn btn-sm btn-primary" data-act="accept-sugg" data-id="' + esc(p.id) + '">Assign</button></div>';
+    });
+    var had = dlg.contains(document.activeElement);
+    dlg.innerHTML = h;
+    if (had) dlg.focus();
+  }
+  function onKeyN(e) {
+    var dlg = root.querySelector('#rk-ndlg');
+    if (e.key === 'Escape') { e.preventDefault(); closeProfile(); return; }
+    if (e.key !== 'Tab') return;
+    var f = dlg.querySelectorAll('button, [tabindex="0"]');
+    if (!f.length) { e.preventDefault(); dlg.focus(); return; }
+    var first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && (document.activeElement === first || document.activeElement === dlg)) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+  var profileOpener = null;
+  function openProfile(id, opener) {
+    if (!nurseById(id)) return;
+    profileId = id; profileOpener = opener || null;
+    root.querySelector('#rk-nmodal').hidden = false;
+    renderProfile();
+    document.addEventListener('keydown', onKeyN);
+    var x = root.querySelector('#rk-ndlg [data-act=nurse-close]'); if (x) x.focus();
+  }
+  function closeProfile() {
+    var m = root && root.querySelector('#rk-nmodal');
+    if (!m || m.hidden) { profileId = null; return; }
+    profileId = null; m.hidden = true;
+    document.removeEventListener('keydown', onKeyN);
+    if (profileOpener && document.body.contains(profileOpener)) profileOpener.focus();
+  }
+
+  var DEMO_DOCS = [
+    { name: 'Dr. Patel', role: 'Attending', years: 14, focus: 'Emergency medicine' },
+    { name: 'Dr. Okafor', role: 'Attending', years: 9, focus: 'Emergency medicine, trauma' },
+    { name: 'Dr. Lindqvist', role: 'Attending', years: 6, focus: 'Pediatric emergency medicine' }
+  ];
+  var docList = null;
+  function physicians() {
+    if (docList) return docList;
+    var src = H.state.physicians || H.state.doctors, out;
+    out = (Array.isArray(src) && src.length ? src : DEMO_DOCS).map(function (d, i) {
+      var o = typeof d === 'string' ? { name: d } : d;
+      return { id: 'd' + (o.id != null ? o.id : i), name: o.name || String(o.id), role: o.role || 'Physician', years: o.years != null ? o.years : o.experience_years, focus: o.focus || o.specialty || o.focus_area || '' };
+    });
+    docList = out;
+    return out;
+  }
+  function staffById(id) {
+    return nurseById(id) || physicians().filter(function (d) { return d.id === id; })[0] || null;
+  }
+  function nurseById(id) { return roster().filter(function (n) { return n.id === id; })[0] || null; }
+  function cleanAssign() {
+    Object.keys(assign).forEach(function (id) {
+      var p = H.getPatient(id);
+      if (!p || p.status !== 'waiting' || !staffById(assign[id])) delete assign[id];
+    });
+  }
+  function doAssign(id, nurseId) {
+    var p = H.getPatient(id), n = nurseId ? staffById(nurseId) : null, msgEl;
+    if (!p || p.status !== 'waiting' || (nurseId && !n)) return;
+    if (n) {
+      var sg = sugg[id], sn = sg && nurseById(sg.nurseId);
+      if (sn) H.logOverride({ module: 'ranking', patient_id: id, ai_suggestion: 'Suggested ' + sn.name + ': ' + sg.text,
+        nurse_decision: sn.id === n.id ? 'Accepted: assigned to ' + n.name : 'Assigned to ' + n.name + ' instead of ' + sn.name,
+        reason: sn.id === n.id ? 'Nurse accepted the suggestion' : 'Nurse chose a different nurse' });
+      assign[id] = n.id;
+    } else if (assign[id]) delete assign[id]; else return;
+    lastMsg = n ? id + ' assigned to ' + n.name + '.' : id + ' returned to the waiting list.';
+    refresh();
+    msgEl = root.querySelector('#rk-msg'); if (msgEl) msgEl.textContent = lastMsg;
+  }
 
   /* ---------- helpers ---------- */
   function r1(n) { return Math.round(n * 10) / 10; }
@@ -153,8 +409,9 @@
   /** Returns {ranked:[{p,s,rank,key}]}. Order is ESI first, always; score only reorders inside an ESI group. */
   function computeQueue() {
     var waiting = H.state.patients.filter(function (p) { return p.status === 'waiting'; });
+    cleanAssign();
     var offline = H.state.aiOffline, avgs = esiAverages(waiting);
-    var rows = waiting.map(function (p) {
+    var rows = waiting.filter(function (p) { return !assign[p.id]; }).map(function (p) {
       var s = scorePatient(p, avgs);
       return { p: p, s: s, key: s.total + (bias[p.id] || 0), pinned: !!pins[p.id] };
     });
@@ -194,6 +451,15 @@
       '.rk-form{margin-top:.5rem;padding:.6rem;background:var(--brand-tint);border-radius:var(--radius);display:flex;flex-wrap:wrap;gap:.5rem .8rem;align-items:flex-end}' +
       '.rk-form .fld{display:flex;flex-direction:column;gap:.2rem}' +
       '.rk-pending{margin-top:.5rem;padding:.5rem .6rem;background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:var(--radius)}' +
+      '.rk-weights{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem 1.4rem;margin-top:.7rem}@media (max-width:640px){.rk-weights{grid-template-columns:1fr}}' +
+      '.rk-listcard{position:relative}.rk-listcard>h2{margin-right:3rem}' +
+      '.rk-gear{position:absolute;top:.6rem;right:.6rem;width:2.4rem;height:2.4rem;padding:0;display:flex;align-items:center;justify-content:center;border-radius:50%}' +
+      '.rk-modal{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.45);display:flex;align-items:flex-start;justify-content:center;padding:4.5rem 1rem 1rem;overflow:hidden}.rk-modal[hidden]{display:none}' +
+      '.rk-dialog{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);width:100%;max-width:46rem;max-height:calc(100vh - 6rem);overflow-y:auto;padding:1rem 1.2rem;box-sizing:border-box}' +
+      '.rk-dlg-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem}' +
+      '.rk-weights .w{display:flex;flex-direction:column;gap:.15rem}.rk-weights input[type=range]{padding:0;min-height:28px;width:100%}' +
+      '.rk-wsave{display:flex;flex-direction:column;gap:.4rem;margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--line);max-width:40rem}' +
+      '.rk-weights .w .d{font-size:.85rem}.rk-weights .wh{display:flex;justify-content:space-between;align-items:baseline;gap:.4rem}.rk-weights .wv{color:var(--brand-dark)}' +
       '.rk-info{cursor:help;color:var(--brand);font-weight:700;border-radius:50%;padding:0 .2rem}' +
       '.rk-gap{background:var(--warn-bg);color:var(--warn-ink);border:1px solid var(--warn-line);border-radius:var(--radius);padding:.5rem .8rem;margin:.6rem 0;font-weight:500}' +
       '.rk-summary{cursor:pointer;font-weight:700;font-size:1.05rem}' +
@@ -202,7 +468,35 @@
       '.rk-esi-h.esi-1{background:var(--esi1-bg);color:var(--esi1)}.rk-esi-h.esi-2{background:var(--esi2-bg);color:var(--esi2)}.rk-esi-h.esi-3{background:var(--esi3-bg);color:var(--esi3)}' +
       '.rk-esi-h.esi-4{background:var(--esi4-bg);color:var(--esi4)}.rk-esi-h.esi-5{background:var(--esi5-bg);color:var(--esi5)}' +
       '.rk-logbox>summary{display:flex;align-items:center;gap:.5rem}.rk-logbox[open]>summary{margin-bottom:.6rem}' +
-      '.rk-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:1rem}' +
+      '.rk-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:1rem}' +
+      '.rk-row[draggable=true]{cursor:grab}.rk-row.rk-dragging,.rk-chip.rk-dragging{opacity:.45}' +
+      '#rk-list.rk-over{outline:2px dashed var(--brand);outline-offset:4px;border-radius:var(--radius)}' +
+      '.rk-assign{font-size:.85rem;min-height:2rem;max-width:9rem}' +
+      '.rk-sec{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);margin-top:.1rem}.rk-sec-q{margin-top:.5rem;padding-top:.4rem;border-top:1px dashed var(--line)}' +
+      '.rk-sec-btn{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:.35rem;width:100%;cursor:pointer;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}.rk-sec-btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px}' +
+      '.rk-secbody{display:flex;flex-direction:column;gap:.4rem}.rk-secbody[hidden]{display:none}' +
+      '.rk-qchip{cursor:default;border-style:dashed}.rk-qempty{margin:0;font-size:.85rem}' +
+      '#rk-list{max-height:calc(100vh - 15rem);min-height:14rem;overflow-y:auto;overscroll-behavior:contain;padding:0 .3rem .6rem 0}' +
+      '.rk-esi-toggle{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:.5rem;width:100%;cursor:pointer}.rk-esi-toggle:focus-visible{outline:2px solid var(--brand);outline-offset:2px}' +
+      '.rk-esi-toggle .m{margin-left:auto}.rk-chev{width:1rem;text-align:center}.rk-esi-body[hidden]{display:none}' +
+      '.rk-grip{cursor:grab;color:var(--muted);letter-spacing:-.15em;font-weight:700;user-select:none;padding:0 .1rem}' +
+      '.rk-row.rk-dropabove{box-shadow:0 -3px 0 0 var(--brand)}.rk-row.rk-dropbelow{box-shadow:0 3px 0 0 var(--brand)}' +
+      '.rk-suggwrap{position:relative;margin-top:.3rem}' +
+      '.rk-suggchip{font:inherit;font-size:.82rem;font-weight:600;padding:.1rem .55rem;border:1px solid var(--brand);border-radius:999px;background:var(--brand-tint);color:var(--brand-dark);cursor:pointer}' +
+      '.rk-pop{position:absolute;z-index:30;top:calc(100% + .3rem);left:0;width:min(22rem,80vw);padding:.6rem .8rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 6px 20px rgba(0,0,0,.2);font-size:.9rem}' +
+      '.rk-pop p{margin:.35rem 0}.rk-pop-h{display:flex;justify-content:space-between;align-items:center;gap:.5rem}' +
+      '.rk-nurse-btn{background:none;border:0;padding:0;font:inherit;font-weight:700;color:var(--brand-dark);text-decoration:underline;cursor:pointer;text-align:left}' +
+      '.rk-nurse-id{min-width:0}.rk-nurse-sub{font-size:.8rem}' +
+      '.rk-ph{margin:1rem 0 .4rem;font-size:1rem}.rk-chips{display:flex;flex-wrap:wrap;gap:.35rem}' +
+      '.rk-prow{display:flex;align-items:flex-start;gap:.6rem;padding:.45rem 0;border-top:1px solid var(--line)}.rk-prow .rk-main{flex:1;min-width:0}' +
+      '.rk-nurses{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:.7rem}' +
+      '.rk-nurse{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);display:flex;flex-direction:column;min-width:0}' +
+      '.rk-nurse-h{display:flex;justify-content:space-between;align-items:center;gap:.4rem;padding:.45rem .7rem;border-bottom:1px solid var(--line);background:var(--brand-tint);border-radius:var(--radius) var(--radius) 0 0}' +
+      '.rk-nurse.rk-over{outline:3px solid var(--brand);outline-offset:1px;background:var(--brand-tint)}' +
+      '.rk-drop{flex:1;min-height:4.5rem;padding:.5rem;display:flex;flex-direction:column;gap:.4rem}.rk-empty{margin:auto;text-align:center;font-size:.85rem}' +
+      '.rk-chip{border:1px solid var(--line);border-radius:var(--radius);padding:.35rem .5rem;background:var(--surface);cursor:grab;font-size:.9rem}' +
+      '.rk-chip.rk-flash{animation:rkflash 2.8s ease-out;outline:3px solid var(--brand)}' +
+      '.rk-chip-h{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}.rk-chip-h .btn{margin-left:auto;min-width:1.8rem}' +
       '@media (max-width:1100px){.rk-grid{grid-template-columns:1fr}}';
     document.head.appendChild(st);
   }
@@ -214,19 +508,26 @@
       '<ul class="rk-sumbar" id="rk-sumbar" aria-label="Queue summary"></ul>' +
       '<div id="rk-leave" aria-live="polite"></div>' +
       '<div id="rk-offline"></div>' +
-      '<div class="card"><details id="rk-weights-box"><summary class="rk-summary">Scoring weights<br><span class="muted" style="font-weight:500">Adjust how much each factor matters, based on your experience on the floor.</span></summary>' +
+      '<div class="rk-grid"><div>' +
+      '<div class="card rk-listcard"><button type="button" class="btn btn-sm rk-gear" id="rk-gear" aria-label="Scoring weights" title="Scoring weights" aria-haspopup="dialog" aria-expanded="false">' + GEAR_SVG + '</button><h2>Ranked waiting list</h2><div id="rk-msg" class="sr-only" aria-live="polite"></div><div id="rk-list"></div></div>' +
+      '</div><div>' +
+      '<div class="card rk-listcard"><button type="button" class="btn btn-sm rk-gear" id="rk-sugg-refresh" data-act="sugg-refresh" aria-label="Refresh nurse suggestions" title="Refresh nurse suggestions">' + REFRESH_SVG + '</button><h2>Nurses on shift</h2><div class="rk-nurses" id="rk-nurses"></div></div>' +
+      '<div class="card"><h2>Physicians on duty</h2><div class="rk-nurses" id="rk-docs"></div></div>' +
+      '</div></div>' +
+      '</div>' +
+      '<div class="rk-modal" id="rk-nmodal" hidden><div class="rk-dialog" id="rk-ndlg" role="dialog" aria-modal="true" aria-labelledby="rk-n-t" tabindex="-1"></div></div>' +
+      '<div class="rk-modal" id="rk-modal" hidden><div class="rk-dialog" role="dialog" aria-modal="true" aria-labelledby="rk-dlg-t" tabindex="-1">' +
+      '<div class="rk-dlg-head"><div><h2 id="rk-dlg-t" style="margin:0">Scoring weights — set by nurses</h2>' +
+      '<p class="muted" style="margin:.2rem 0 0">Adjust how much each factor matters, based on your experience on the floor. Points only reorder patients within the same acuity level.</p></div>' +
+      '<button type="button" class="btn btn-sm" id="rk-dlg-x" aria-label="Close scoring weights">✕</button></div>' +
+      '<p class="muted" style="margin:.7rem 0 0">Changes preview in the queue behind this window. Closing without saving discards them. Reviewed monthly by the nurse committee.</p>' +
       '<div class="rk-weights" id="rk-weights"></div>' +
       '<div class="rk-wsave"><div class="rk-wreason"><label for="rk-w-reason">Why are you changing this? (optional)</label>' +
       '<input id="rk-w-reason" type="text" maxlength="200" placeholder="e.g. Nights are seeing slow re-checks"></div>' +
       '<div class="rk-wbtns"><button type="button" class="btn btn-sm btn-primary" id="rk-w-save">Save change</button>' +
-      '<button type="button" class="btn btn-sm" id="rk-reset">Reset weights to defaults</button></div>' +
-      '<p class="muted rk-wlast" id="rk-w-last" role="status" aria-live="polite"></p></div></details></div>' +
-      '<div class="rk-grid"><div>' +
-      '<div class="card"><h2>Ranked waiting list</h2><div id="rk-msg" class="sr-only" aria-live="polite"></div><div id="rk-list"></div></div>' +
-      '</div><div>' +
-      '<div class="card"><details class="rk-logbox" id="rk-logbox"><summary class="rk-summary">Override log <span class="pill" id="rk-log-n">0</span></summary><div id="rk-log"></div></details></div>' +
-      '</div></div>' +
-      '</div>';
+      '<button type="button" class="btn btn-sm" id="rk-reset">Reset weights to defaults</button>' +
+      '<button type="button" class="btn btn-sm" id="rk-dlg-close">Close</button></div>' +
+      '<p class="muted rk-wlast" id="rk-w-last" role="status" aria-live="polite"></p></div></div></div>';
     buildWeights();
   }
 
@@ -316,18 +617,28 @@
   function rankingLog() { return H.state.overrides.filter(function (o) { return o.module === 'ranking' || o.module === 'fasttrack'; }); }
 
   function renderSummary(q, nFlags) {
-    var pend = 0, ov = rankingLog().length;
+    var pend = 0;
     H.state.patients.forEach(function (p) { pendingUpdates(p).forEach(function (x) { if (!x.u.red_flag) pend++; }); });
     function t(n, label, cls) { return '<li' + (cls ? ' class="' + cls + '"' : '') + '><b>' + n + '</b><span>' + label + '</span></li>'; }
-    root.querySelector('#rk-sumbar').innerHTML = t(q.ranked.length, 'Waiting') + t(nFlags, nFlags === 1 ? 'Red flag' : 'Red flags', nFlags ? 'hot' : '') +
-      t(pend, 'Symptom updates pending', pend ? 'warm' : '') + t(ov, ov === 1 ? 'Logged override' : 'Logged overrides');
+    root.querySelector('#rk-sumbar').innerHTML = t(q.ranked.length, 'Waiting') + t(Object.keys(assign).length, 'Assigned') + t(nFlags, nFlags === 1 ? 'Red flag' : 'Red flags', nFlags ? 'hot' : '') +
+      t(pend, 'Symptom updates pending', pend ? 'warm' : '');
   }
 
   function showRow(id) {
+    var g0 = H.getPatient(id);
+    if (g0 && !openEsi[g0.esi]) { openEsi[g0.esi] = true; refresh(); }
     var row = root.querySelector('[data-row="' + id + '"]');
-    if (!row) { lastMsg = id + ' is not in the ranked list.'; root.querySelector('#rk-msg').textContent = lastMsg; return; }
-    var top = row.getBoundingClientRect().top + window.pageYOffset - (document.querySelector('.app-top') || { offsetHeight: 0 }).offsetHeight - 12;
-    window.scrollTo(0, Math.max(0, top));
+    if (!row) {
+      var chip = root.querySelector('[data-pid="' + id + '"]');
+      if (chip) {
+        chip.scrollIntoView({ block: 'center' });
+        chip.classList.remove('rk-flash'); void chip.offsetWidth; chip.classList.add('rk-flash');
+        setTimeout(function () { chip.classList.remove('rk-flash'); }, 2900);
+        root.querySelector('#rk-msg').textContent = id + ' is with ' + (staffById(assign[id]) || { name: 'a nurse' }).name + '.';
+        return;
+      }
+      lastMsg = id + ' is not in the ranked list.'; root.querySelector('#rk-msg').textContent = lastMsg; return; }
+    row.scrollIntoView({ block: 'center' });   // the list scrolls in place; this also brings the card into view
     row.classList.remove('rk-flash'); void row.offsetWidth; row.classList.add('rk-flash');
     row.setAttribute('tabindex', '-1'); row.focus({ preventScroll: true });
     root.querySelector('#rk-msg').textContent = 'Showing ' + id + ' in the queue.';
@@ -405,7 +716,7 @@
   }
 
   function formHtml(r) {
-    var id = esc(r.p.id), label = pending.action === 'up' ? 'Move up' : pending.action === 'down' ? 'Move down' : pending.action === 'pin' ? 'Pin to top' : 'Unpin';
+    var id = esc(r.p.id), label = (pending.action === 'move' || pending.action === 'reason-move') ? pending.label : pending.action === 'up' ? 'Move up' : pending.action === 'down' ? 'Move down' : pending.action === 'pin' ? 'Pin to top' : 'Unpin';
     return '<form class="rk-form" data-form="override" data-id="' + id + '"><div><strong>' + label + ': ' + id + '</strong></div>' +
       '<div class="fld"><label for="rk-reason">Reason (required)</label><select id="rk-reason" required>' +
       '<option value="">Choose a reason</option><option value="clinical judgment">Clinical judgment</option>' +
@@ -413,22 +724,24 @@
       '<option value="other">Other (explain)</option></select></div>' +
       '<div class="fld"><label for="rk-reason-text">Details (required for Other)</label><input id="rk-reason-text" type="text" maxlength="200"></div>' +
       '<button type="submit" class="btn btn-primary btn-sm">Save override</button> ' +
-      '<button type="button" class="btn btn-sm" data-act="cancel">Cancel</button>' +
+      '<button type="button" class="btn btn-sm" data-act="cancel">' + (pending.action === 'reason-move' ? 'Undo move' : 'Cancel') + '</button>' +
       '<span class="muted" id="rk-form-err" role="alert"></span></form>';
   }
 
   function rowHtml(r, groupInfo) {
     var p = r.p, id = esc(p.id), offline = H.state.aiOffline, open = !!expanded[p.id];
-    var h = '<div class="rk-row' + (r.pinned ? ' pinned' : '') + '" data-row="' + id + '"><div class="rk-head">' +
+    var h = '<div class="rk-row' + (r.pinned ? ' pinned' : '') + '" data-row="' + id + '" draggable="true"><div class="rk-head">' +
+      (offline ? '' : '<span class="rk-grip" aria-hidden="true" title="Drag to reorder within this ESI level, or onto a nurse to assign">⋮⋮</span>') +
       '<span class="rk-rank" aria-label="Rank ' + r.rank + '">#' + r.rank + '</span>' +
       '<span class="badge esi-' + esc(p.esi) + '">ESI ' + esc(p.esi) + '</span>' +
       '<div class="rk-main"><strong>' + id + '</strong> · ' + esc(p.age) + esc(p.sex) + ' · ' + esc(p.chief_complaint) +
-      '<div class="muted">Waiting ' + waitMin(p) + ' min' + badges(r) + '</div></div>' +
+      '<div class="muted">Waiting ' + waitMin(p) + ' min' + badges(r) + '</div>' + suggHtml(p) + '</div>' +
       (offline ? '' : '<span class="rk-score" title="Points within ESI ' + esc(p.esi) + '">' + r.s.total + ' pts</span>') +
       '<div class="rk-actions">' +
+      '<select class="rk-assign" data-assign="' + id + '" aria-label="Assign ' + id + ' to a nurse"><option value="">Assign to…</option>' +
+      '<optgroup label="Nurses">' + roster().map(function (n) { return '<option value="' + esc(n.id) + '">' + esc(n.name) + '</option>'; }).join('') + '</optgroup>' +
+      '<optgroup label="Physicians">' + physicians().map(function (d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + '</option>'; }).join('') + '</optgroup></select>' +
       (offline ? '' : '<button type="button" class="btn btn-sm" data-act="why" data-id="' + id + '" aria-expanded="' + open + '">' + (open ? 'Hide reasoning' : 'Show reasoning') + '</button>' +
-        '<button type="button" class="btn btn-sm" data-act="up" data-id="' + id + '" aria-label="Move ' + id + ' up within ESI ' + esc(p.esi) + '"' + (groupInfo.first ? ' disabled' : '') + '>▲</button>' +
-        '<button type="button" class="btn btn-sm" data-act="down" data-id="' + id + '" aria-label="Move ' + id + ' down within ESI ' + esc(p.esi) + '"' + (groupInfo.last ? ' disabled' : '') + '>▼</button>' +
         (r.pinned ? '<button type="button" class="btn btn-sm" data-act="unpin" data-id="' + id + '">Unpin</button>'
           : '<button type="button" class="btn btn-sm" data-act="pin" data-id="' + id + '">Pin to top</button>')) +
       '</div></div>' + pendingHtml(p) +
@@ -445,13 +758,65 @@
     q.ranked.forEach(function (r, i) {
       var prev = q.ranked[i - 1], next = q.ranked[i + 1], e = r.p.esi;
       if (e !== lastEsi) {
-        html += '<h3 class="rk-esi-h esi-' + esc(e) + '"><span class="t">ESI ' + esc(e) + ' · ' + LVL[e] + '</span><span class="m">' + cnt[e] + ' waiting</span></h3>';
+        if (lastEsi !== null) html += '</div>';
+        var shut = !openEsi[e];
+        html += '<h3 class="rk-esi-h esi-' + esc(e) + '"><button type="button" class="rk-esi-toggle" data-act="esi-toggle" data-id="' + esc(e) + '" aria-expanded="' + !shut + '" aria-controls="rk-esi-body-' + esc(e) + '">' +
+          '<span class="rk-chev" aria-hidden="true">' + (shut ? '▸' : '▾') + '</span><span class="t">ESI ' + esc(e) + ' · ' + LVL[e] + '</span><span class="m">' + cnt[e] + ' waiting</span></button></h3>' +
+          '<div class="rk-esi-body" id="rk-esi-body-' + esc(e) + '"' + (shut ? ' hidden' : '') + '>';
         lastEsi = e;
       }
       html += rowHtml(r, { first: !prev || prev.p.esi !== r.p.esi, last: !next || next.p.esi !== r.p.esi });
     });
+    if (lastEsi !== null) html += '</div>';
     root.querySelector('#rk-list').innerHTML = html;
     return q;
+  }
+
+  function secHead(key, label, cls) {
+    var shut = !openSec[key];
+    return '<button type="button" class="rk-sec rk-sec-btn' + cls + '" data-act="sec-toggle" data-id="' + esc(key) + '" aria-expanded="' + !shut + '"><span class="rk-chev" aria-hidden="true">' + (shut ? '▸' : '▾') + '</span>' + esc(label) + '</button>';
+  }
+  function renderStaff(boxId, list, isNurse) {
+    var box = root.querySelector(boxId), html = '';
+    list.forEach(function (n) {
+      var ids = Object.keys(assign).filter(function (id) { return assign[id] === n.id; })
+        .map(function (id) { return H.getPatient(id); }).filter(Boolean).sort(U.esiArrivalCompare);
+      var sub = esc(n.role) + (n.years != null ? ' · ' + esc(n.years) + ' yrs' : '') + (!isNurse && n.focus ? ' · ' + esc(n.focus) : '');
+      html += '<section class="rk-nurse" data-drop="' + esc(n.id) + '" aria-label="' + esc(n.name) + ', ' + ids.length + (ids.length === 1 ? ' patient' : ' patients') + '">' +
+        '<div class="rk-nurse-h"><div class="rk-nurse-id">' +
+        (isNurse ? '<button type="button" class="rk-nurse-btn" data-act="nurse-profile" data-id="' + esc(n.id) + '" aria-haspopup="dialog" title="Open profile">' + esc(n.name) + '</button>' : '<strong>' + esc(n.name) + '</strong>') +
+        '<div class="muted rk-nurse-sub">' + sub + '</div></div><span class="pill">' + ids.length + (ids.length === 1 ? ' patient' : ' patients') + '</span></div><div class="rk-drop">';
+      if (isNurse) html += secHead(n.id + ':cur', 'Current patients (' + ids.length + ')', '') + '<div class="rk-secbody"' + (!openSec[n.id + ':cur'] ? ' hidden' : '') + '>';
+      if (!ids.length) html += '<p class="muted rk-empty">Drag a patient here</p>';
+      ids.forEach(function (p) {
+        var pid = esc(p.id);
+        html += '<div class="rk-chip" draggable="true" data-pid="' + pid + '"><div class="rk-chip-h"><span class="badge esi-' + esc(p.esi) + '">ESI ' + esc(p.esi) + '</span><strong>' + pid + '</strong>' +
+          '<button type="button" class="btn btn-sm" data-act="unassign" data-id="' + pid + '" aria-label="Unassign ' + pid + ' from ' + esc(n.name) + '">✕</button></div>' +
+          '<div class="muted">' + esc(p.chief_complaint) + ' · waiting ' + waitMin(p) + ' min</div>' + pendingHtml(p) + '</div>';
+      });
+      if (isNurse) {
+        html += '</div>';
+        var q = Object.keys(sugg).filter(function (pid) { return sugg[pid].nurseId === n.id && !assign[pid]; })
+          .map(function (pid) { return H.getPatient(pid); }).filter(Boolean).sort(U.esiArrivalCompare);
+        html += secHead(n.id + ':q', 'Queued · AI suggested (' + q.length + ')', ' rk-sec-q') + '<div class="rk-secbody"' + (!openSec[n.id + ':q'] ? ' hidden' : '') + '>';
+        if (!q.length) html += '<p class="muted rk-qempty">No suggestions</p>';
+        q.forEach(function (p) {
+          var pid = esc(p.id);
+          html += '<div class="rk-chip rk-qchip" title="' + esc(sugg[p.id].text) + '"><div class="rk-chip-h"><span class="badge esi-' + esc(p.esi) + '">ESI ' + esc(p.esi) + '</span><strong>' + pid + '</strong>' +
+            '<button type="button" class="btn btn-sm btn-primary" data-act="accept-sugg" data-id="' + pid + '" aria-label="Accept ' + pid + ' for ' + esc(n.name) + '">Accept</button></div>' +
+            '<div class="muted">' + esc(p.chief_complaint) + ' · waiting ' + waitMin(p) + ' min</div></div>';
+        });
+        html += '</div>';
+      }
+      html += '</div></section>';
+    });
+    box.innerHTML = html;
+  }
+  function renderNurses() { renderStaff('#rk-nurses', roster(), true); renderStaff('#rk-docs', physicians(), false); }
+
+  function renderSuggMeta() {
+    var el = root.querySelector('#rk-sugg-refresh');
+    if (el) el.title = 'Refresh nurse suggestions' + (suggMeta.time ? ' (last updated ' + suggMeta.time + suggMeta.why + ')' : '');
   }
 
   function renderOffline() {
@@ -460,6 +825,7 @@
   }
 
   function renderLog() {
+    if (!root.querySelector('#rk-log')) return;   // log box removed from this tab; overrides are still recorded in H.state.overrides
     var items = rankingLog().slice().reverse();
     var h = items.length ? '<div class="table-wrap"><table class="table"><thead><tr><th>Time</th><th>Patient</th><th>Decision</th><th>Reason</th></tr></thead><tbody>' : '<p class="muted">No overrides logged yet.</p>';
     items.forEach(function (o) {
@@ -476,7 +842,11 @@
     var nFlags = renderAlerts();
     renderLeave();
     renderOffline();
+    syncSuggestions();
     var q = renderList();
+    renderNurses();
+    renderSuggMeta();
+    if (profileId) renderProfile();
     renderSummary(q, nFlags);
     renderLog();
   }
@@ -499,12 +869,36 @@
     return { me: me, grp: grp, idx: grp.indexOf(me) };
   }
 
-  function applyOverride(id, action, reason, meta) {
+  /* Drag-to-reorder: the patient moves first; the reason is asked afterwards (Undo reverts the move). */
+  function applyMove(id, pend) {
+    var g = groupOf(id), tgt = g && g.grp.filter(function (x) { return x.p.id === pend.targetId; })[0];
+    if (!g || !tgt) return null;
+    var rec = { id: id, before: 'Rank ' + g.me.rank + ' (' + g.me.s.total + ' pts) in ESI ' + g.me.p.esi,
+      had: Object.prototype.hasOwnProperty.call(bias, id), prevBias: bias[id], prevPin: !!pins[id],
+      decision: (pend.below ? 'Moved below ' : 'Moved above ') + tgt.p.id + ' within ESI ' + g.me.p.esi };
+    if (tgt.pinned && !g.me.pinned) pins[id] = true; else if (!tgt.pinned && g.me.pinned) delete pins[id];
+    bias[id] = (tgt.key + (pend.below ? -0.01 : 0.01)) - g.me.s.total;
+    return rec;
+  }
+  function undoPendingMove() {
+    if (!pending || pending.action !== 'reason-move' || !pending.rec) return;
+    var r = pending.rec;
+    if (r.had) bias[r.id] = r.prevBias; else delete bias[r.id];
+    if (r.prevPin) pins[r.id] = true; else delete pins[r.id];
+  }
+  function applyOverride(id, action, reason, meta, pend) {
     var g = groupOf(id);
     if (!g) return;
     var before = 'Rank ' + g.me.rank + ' (' + g.me.s.total + ' pts) in ESI ' + g.me.p.esi, decision;
     if (action === 'pin') { pins[id] = true; decision = 'Pinned to top of ESI ' + g.me.p.esi; }
     else if (action === 'unpin') { delete pins[id]; decision = 'Unpinned'; }
+    else if (action === 'move' && pend) {
+      var tgt = g.grp.filter(function (x) { return x.p.id === pend.targetId; })[0];
+      if (!tgt) return;
+      if (tgt.pinned && !g.me.pinned) pins[id] = true; else if (!tgt.pinned && g.me.pinned) delete pins[id];
+      bias[id] = (tgt.key + (pend.below ? -0.01 : 0.01)) - g.me.s.total;
+      decision = (pend.below ? 'Moved below ' : 'Moved above ') + tgt.p.id + ' within ESI ' + g.me.p.esi;
+    }
     else {
       var other = g.grp[action === 'up' ? g.idx - 1 : g.idx + 1];
       if (!other) return;
@@ -523,8 +917,20 @@
     if (!b || !root.contains(b)) return;
     var act = b.getAttribute('data-act'), id = b.getAttribute('data-id'), i = parseInt(b.getAttribute('data-i'), 10);
     if (act === 'why') { expanded[id] = !expanded[id]; refresh(); }
-    else if (act === 'up' || act === 'down' || act === 'pin' || act === 'unpin') { pending = { id: id, action: act }; refresh(); var s = root.querySelector('#rk-reason'); if (s) s.focus(); }
-    else if (act === 'cancel') { pending = null; refresh(); }
+    else if (act === 'unassign') { doAssign(id, null); }
+    else if (act === 'esi-toggle') { openEsi[id] = !openEsi[id]; refresh(); var tb = root.querySelector('[data-act=esi-toggle][data-id="' + id + '"]'); if (tb) tb.focus(); }
+    else if (act === 'sec-toggle') { openSec[id] = !openSec[id]; refresh(); var sb = root.querySelector('[data-act=sec-toggle][data-id="' + id + '"]'); if (sb) sb.focus(); }
+    else if (act === 'nurse-profile') { openProfile(id, b); }
+    else if (act === 'nurse-close') { closeProfile(); }
+    else if (act === 'accept-sugg') { var sg = sugg[id]; suggOpen = null; if (sg) doAssign(id, sg.nurseId); }
+    else if (act === 'sugg-why') {
+      suggOpen = suggOpen === id ? null : id; refresh();
+      var pb = root.querySelector(suggOpen ? '.rk-pop [data-act=accept-sugg]' : '[data-act=sugg-why][data-id="' + id + '"]'); if (pb) pb.focus();
+    }
+    else if (act === 'sugg-close') { var cid = suggOpen; suggOpen = null; refresh(); var cb = root.querySelector('[data-act=sugg-why][data-id="' + cid + '"]'); if (cb) cb.focus(); }
+    else if (act === 'sugg-refresh') { suggMeta.why = ' (manual)'; computeSuggestions(true); refresh(); }
+    else if (act === 'up' || act === 'down' || act === 'pin' || act === 'unpin') { undoPendingMove(); pending = { id: id, action: act }; refresh(); var s = root.querySelector('#rk-reason'); if (s) s.focus(); }
+    else if (act === 'cancel') { undoPendingMove(); pending = null; refresh(); }
     else if (act === 'confirm') {
       var nurse = H.state.settings.nurse;
       setUpdate(id, i, { confirmed_by: nurse });
@@ -564,9 +970,11 @@
     if (!sel) { err.textContent = 'Choose a reason.'; return; }
     if (sel === 'other' && !txt) { err.textContent = 'Please explain the reason.'; return; }
     var reason = sel + (txt ? ': ' + txt : '');
-    var id = f.getAttribute('data-id'), action = pending && pending.action;
+    var id = f.getAttribute('data-id'), pend = pending, action = pend && pend.action;
     pending = null;
-    applyOverride(id, action, reason);
+    if (action === 'reason-move' && pend && pend.rec) {
+      H.logOverride({ module: 'ranking', patient_id: id, ai_suggestion: pend.rec.before, nurse_decision: pend.rec.decision, reason: reason });
+    } else applyOverride(id, action, reason, null, pend);
     refresh();
   }
 
@@ -641,7 +1049,107 @@
       ['pointerup', 'pointercancel', 'focusout', 'change'].forEach(function (n) { el.addEventListener(n, onBubbleEvt); });
       document.addEventListener('pointerup', function () { root.querySelectorAll('.wbubble.show').forEach(function (b) { hideBubbleSoon(root.querySelector('#rk-w-' + b.id.slice(6))); }); });
       if (lastWeightChange) root.querySelector('#rk-w-last').textContent = 'Last changed ' + lastWeightChange.time + ' by ' + lastWeightChange.nurse;
+      el.addEventListener('change', function (e) {
+        var t = e.target, id = t.getAttribute && t.getAttribute('data-assign');
+        if (id && t.value) doAssign(id, t.value);
+      });
+      function zoneOf(t) { return t.closest ? t.closest('[data-drop], #rk-list') : null; }
+      function clearOver() { [].forEach.call(el.querySelectorAll('.rk-over, .rk-dropabove, .rk-dropbelow'), function (z) { z.classList.remove('rk-over', 'rk-dropabove', 'rk-dropbelow'); }); }
+      /* dropping a waiting-list row on another row of the same ESI level reorders it (a reason is asked, as before) */
+      function reorderTarget(e) {
+        if (!dragId || H.state.aiOffline) return null;
+        var src = el.querySelector('#rk-list [data-row="' + dragId + '"]');
+        var row = e.target.closest ? e.target.closest('.rk-row') : null;
+        if (!src || !row || row === src) return null;
+        var tp = H.getPatient(row.getAttribute('data-row')), sp = H.getPatient(dragId);
+        if (!tp || !sp || tp.esi !== sp.esi) return null;
+        var r = row.getBoundingClientRect();
+        return { row: row, id: tp.id, below: e.clientY > r.top + r.height / 2 };
+      }
+      el.addEventListener('dragstart', function (e) {
+        var src = e.target.closest ? e.target.closest('[data-pid], [data-row]') : null;
+        if (!src) return;
+        dragId = src.getAttribute('data-pid') || src.getAttribute('data-row');
+        e.dataTransfer.setData('text/plain', dragId); e.dataTransfer.effectAllowed = 'move';
+        src.classList.add('rk-dragging');
+      });
+      el.addEventListener('dragend', function () {
+        dragId = null; clearOver();
+        [].forEach.call(el.querySelectorAll('.rk-dragging'), function (x) { x.classList.remove('rk-dragging'); });
+      });
+      el.addEventListener('dragover', function (e) {
+        var rt = reorderTarget(e);
+        if (rt) {
+          e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+          var cls = rt.below ? 'rk-dropbelow' : 'rk-dropabove';
+          if (!rt.row.classList.contains(cls)) { clearOver(); rt.row.classList.add(cls); }
+          return;
+        }
+        var z = dragId && zoneOf(e.target);
+        if (!z) return;
+        e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+        if (!z.classList.contains('rk-over')) { clearOver(); z.classList.add('rk-over'); }
+      });
+      el.addEventListener('dragleave', function (e) {
+        var z = zoneOf(e.target);
+        if (z && !(e.relatedTarget && z.contains(e.relatedTarget))) z.classList.remove('rk-over');
+      });
+      el.addEventListener('drop', function (e) {
+        var rt = reorderTarget(e);
+        if (rt) {
+          e.preventDefault(); var mid = dragId; clearOver(); dragId = null;
+          undoPendingMove(); pending = null;
+          var rec = applyMove(mid, { targetId: rt.id, below: rt.below });
+          if (rec) pending = { id: mid, action: 'reason-move', label: rec.decision, rec: rec };
+          refresh();
+          var rs = root.querySelector('#rk-reason'); if (rs) rs.focus();
+          return;
+        }
+        var z = zoneOf(e.target), id = dragId || e.dataTransfer.getData('text/plain');
+        if (!z || !id) return;
+        e.preventDefault(); clearOver(); dragId = null;
+        doAssign(id, z.getAttribute('data-drop'));   // dropping on the waiting list passes null and unassigns
+      });
+      document.addEventListener('click', function (e) {
+        if (suggOpen && !(e.target.closest && e.target.closest('.rk-pop, [data-act=sugg-why]'))) { suggOpen = null; refresh(); }
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && suggOpen) { var cid = suggOpen; suggOpen = null; refresh(); var cb = root.querySelector('[data-act=sugg-why][data-id="' + cid + '"]'); if (cb) cb.focus(); }
+      });
       root.querySelector('#rk-w-save').addEventListener('click', saveWeights);
+      var gear = root.querySelector('#rk-gear'), modal = root.querySelector('#rk-modal'), dlg = root.querySelector('.rk-dialog');
+      function openWeights() {
+        modal.hidden = false; gear.setAttribute('aria-expanded', 'true');
+        document.addEventListener('keydown', onKey);
+        root.querySelector('#rk-dlg-x').focus();
+      }
+      /* Closing discards unsaved slider changes: weights go back to the last saved values. */
+      function closeWeights() {
+        if (modal.hidden) return;
+        COMPONENTS.forEach(function (c) { weights[c.key] = savedWeights[c.key]; });
+        buildWeights();
+        root.querySelector('#rk-w-reason').value = '';
+        root.querySelector('#rk-w-last').textContent = lastWeightChange ? 'Last changed by ' + lastWeightChange.nurse + ' at ' + lastWeightChange.time +
+          (lastWeightChange.reason ? ' — reason: ' + lastWeightChange.reason : ' — no reason given') : '';
+        modal.hidden = true; gear.setAttribute('aria-expanded', 'false');
+        document.removeEventListener('keydown', onKey);
+        refresh();
+        gear.focus();
+      }
+      function onKey(e) {
+        if (e.key === 'Escape') { e.preventDefault(); closeWeights(); return; }
+        if (e.key !== 'Tab') return;
+        var f = dlg.querySelectorAll('button, input, select, textarea, [tabindex="0"]');
+        if (!f.length) return;
+        var first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && (document.activeElement === first || document.activeElement === dlg)) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+      gear.addEventListener('click', openWeights);
+      root.querySelector('#rk-dlg-x').addEventListener('click', closeWeights);
+      root.querySelector('#rk-dlg-close').addEventListener('click', closeWeights);
+      modal.addEventListener('mousedown', function (e) { if (e.target === modal) closeWeights(); });
+      root.querySelector('#rk-nmodal').addEventListener('mousedown', function (e) { if (e.target === this) closeProfile(); });
       root.querySelector('#rk-reset').addEventListener('click', function () {
         COMPONENTS.forEach(function (c) { weights[c.key] = c.def; });
         buildWeights();
