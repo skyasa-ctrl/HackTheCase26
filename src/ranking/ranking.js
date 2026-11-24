@@ -212,9 +212,7 @@
       '<ul class="rk-sumbar" id="rk-sumbar" aria-label="Queue summary"></ul>' +
       '<div id="rk-leave" aria-live="polite"></div>' +
       '<div id="rk-offline"></div>' +
-      '<div class="card"><details id="rk-weights-box"><summary class="rk-summary">Scoring weights — set by nurses<br><span class="muted" style="font-weight:500">Adjust how much each factor matters, based on your experience on the floor.</span></summary>' +
-      '<p style="margin-top:.7rem;margin-bottom:.2rem">Set by nurses. Change a weight when the ranking doesn’t match what you see at the bedside — reviewed monthly by the nurse committee.</p>' +
-      '<p class="muted">Points only reorder patients within the same acuity level.</p>' +
+      '<div class="card"><details id="rk-weights-box"><summary class="rk-summary">Scoring weights<br><span class="muted" style="font-weight:500">Adjust how much each factor matters, based on your experience on the floor.</span></summary>' +
       '<div class="rk-weights" id="rk-weights"></div>' +
       '<div class="rk-wsave"><label for="rk-w-reason">Why are you changing this? (optional)</label>' +
       '<input id="rk-w-reason" type="text" maxlength="200" placeholder="e.g. Nights are seeing slow re-checks">' +
@@ -222,7 +220,7 @@
       '<button type="button" class="btn btn-sm" id="rk-reset">Reset weights to defaults</button></div>' +
       '<p class="muted" id="rk-w-last" role="status" aria-live="polite"></p></div></details></div>' +
       '<div class="rk-grid"><div>' +
-      '<div class="card"><h2>Ranked waiting list</h2><p class="muted" id="rk-sub"></p><div id="rk-msg" class="sr-only" aria-live="polite"></div><div id="rk-list"></div></div>' +
+      '<div class="card"><h2>Ranked waiting list</h2><div id="rk-msg" class="sr-only" aria-live="polite"></div><div id="rk-list"></div></div>' +
       '</div><div>' +
       '<div class="card"><details class="rk-logbox" id="rk-logbox"><summary class="rk-summary">Override log <span class="pill" id="rk-log-n">0</span></summary><div id="rk-log"></div></details></div>' +
       '</div></div>' +
@@ -230,13 +228,14 @@
     buildWeights();
   }
 
-  function levelWord(c, v) { return FMT[c.key](v) + (v === c.def ? ' (default)' : ''); }
+  function levelWord(c, v) { return FMT[c.key](v); }
   function buildWeights() {
     var box = root.querySelector('#rk-weights'), html = '';
     COMPONENTS.forEach(function (c) {
       html += '<div class="w"><div class="wh"><label for="rk-w-' + c.key + '">' + esc(c.label) + ': <span class="wv" id="rk-wv-' + c.key + '">' + levelWord(c, weights[c.key]) + '</span></label>' +
         '<span class="rk-info" tabindex="0" role="img" aria-label="' + esc(TIPS[c.key]) + '" title="' + esc(TIPS[c.key]) + '">ⓘ</span></div>' +
-        '<input type="range" id="rk-w-' + c.key + '" data-w="' + c.key + '" min="0" max="' + c.max + '" step="' + c.step + '" value="' + weights[c.key] + '" aria-describedby="rk-wd-' + c.key + '">' +
+        '<div class="wslider"><span class="wbubble" id="rk-wb-' + c.key + '" aria-hidden="true"></span>' +
+        '<input type="range" id="rk-w-' + c.key + '" data-w="' + c.key + '" min="0" max="' + c.max + '" step="' + c.step + '" value="' + weights[c.key] + '" aria-describedby="rk-wd-' + c.key + '" aria-valuetext="' + esc(FMT[c.key](weights[c.key])) + '"></div>' +
         '<span class="muted d" id="rk-wd-' + c.key + '">' + esc(c.desc) + '</span></div>';
     });
     box.innerHTML = html;
@@ -280,11 +279,10 @@
   }
   function flagCard(f) {
     var p = f.p, u = f.u, id = esc(p.id), syms = u.symptoms || [], h;
-    h = '<article class="rk-flag" aria-label="Red flag, nurse paged, patient ' + id + '">' +
+    h = '<article class="rk-flag" aria-label="Red flag: patient ' + id + ' needs reassessment, nurse paged">' +
       '<div class="rk-flag-icon">' + WARN_SVG + '</div><div class="rk-flag-body">' +
-      '<h2 class="rk-flag-title">Red flag — nurse paged <span class="rk-flag-time">· reported ' + esc(ago(u.time)) + '</span></h2>' +
-      '<p class="rk-flag-line">Patient ' + id + ' · ' + whoWords(p) + ' · Acuity: ESI ' + esc(p.esi) + '</p>' +
-      '<p class="rk-flag-line">Came in for: ' + esc(p.chief_complaint) + '</p>' +
+      '<h2 class="rk-flag-title">' + id + ' needs reassessment <span class="rk-flag-time">· ' + esc(ago(u.time)) + '</span></h2>' +
+      '<p class="rk-flag-line">' + whoWords(p) + ' · ESI ' + esc(p.esi) + ' · came in for ' + esc(p.chief_complaint) + '</p>' +
       (syms.length ? '<p class="rk-flag-line">New symptoms reported: <strong>' + esc(syms.join(', ')) + '</strong></p>' : '');
     if (u.ai_summary || u.red_flag_reason) {
       h += '<p class="rk-flag-line">' + (u.ai_summary ? (u.ai_source && u.ai_source !== 'rules' ? 'AI summary (' + H.ai.sourceName(u.ai_source) + '): ' : 'Patient wrote: ') + esc(u.ai_summary.replace(/^Patient wrote: /, '')) : '') +
@@ -306,7 +304,8 @@
     return flags.length;
   }
 
-  function rankingLog() { return H.state.overrides.filter(function (o) { return o.module === 'ranking'; }); }
+  /* Queue and Fast-track overrides share one log (weights changes have no patient). */
+  function rankingLog() { return H.state.overrides.filter(function (o) { return o.module === 'ranking' || o.module === 'fasttrack'; }); }
 
   function renderSummary(q, nFlags) {
     var pend = 0, ov = rankingLog().length;
@@ -426,8 +425,6 @@
 
   function renderList() {
     var q = computeQueue(), offline = H.state.aiOffline, html = '', lastEsi = null;
-    root.querySelector('#rk-sub').textContent = q.ranked.length + ' waiting. Order: ESI level first (1 = most urgent)' +
-      (offline ? ', then arrival time (AI offline).' : ', then score within the level, then arrival time.');
     if (!q.ranked.length) html = '<p class="muted">No patients are waiting.</p>';
     var cnt = {}, LVL = { 1: 'Resuscitation', 2: 'Emergent', 3: 'Urgent', 4: 'Less urgent', 5: 'Non-urgent' };
     q.ranked.forEach(function (r) { cnt[r.p.esi] = (cnt[r.p.esi] || 0) + 1; });
@@ -453,7 +450,7 @@
     var items = rankingLog().slice().reverse();
     var h = items.length ? '<div class="table-wrap"><table class="table"><thead><tr><th>Time</th><th>Patient</th><th>Decision</th><th>Reason</th></tr></thead><tbody>' : '<p class="muted">No overrides logged yet.</p>';
     items.forEach(function (o) {
-      h += '<tr><td>' + esc(U.fmtTime(o.time)) + '</td><td>' + esc(o.patient_id) + '</td><td>' + esc(o.nurse_decision) +
+      h += '<tr><td>' + esc(U.fmtTime(o.time)) + '</td><td>' + esc(o.patient_id) + '</td><td>' + (o.module === 'fasttrack' ? 'Fast-track: ' : '') + esc(o.nurse_decision) +
         '<div class="muted">AI: ' + esc(o.ai_suggestion) + '</div></td><td>' + esc(o.reason) + '<div class="muted">' + esc(o.nurse) + '</div></td></tr>';
     });
     if (items.length) h += '</tbody></table></div>';
@@ -489,7 +486,7 @@
     return { me: me, grp: grp, idx: grp.indexOf(me) };
   }
 
-  function applyOverride(id, action, reason) {
+  function applyOverride(id, action, reason, meta) {
     var g = groupOf(id);
     if (!g) return;
     var before = 'Rank ' + g.me.rank + ' (' + g.me.s.total + ' pts) in ESI ' + g.me.p.esi, decision;
@@ -503,7 +500,8 @@
       decision = (action === 'up' ? 'Moved above ' : 'Moved below ') + other.p.id + ' within ESI ' + g.me.p.esi;
       if (g.me.pinned && action === 'down') delete pins[id];
     }
-    H.logOverride({ module: 'ranking', patient_id: id, ai_suggestion: before, nurse_decision: decision, reason: reason });
+    var entry = H.logOverride({ module: 'ranking', patient_id: id, ai_suggestion: before, nurse_decision: decision, reason: reason, nurse: meta && meta.nurse });
+    if (meta && meta.time) entry.time = meta.time;
     // 'override' event triggers refresh
   }
 
@@ -566,8 +564,56 @@
     var out = root.querySelector('#rk-wv-' + k);
     var comp = COMPONENTS.filter(function (c) { return c.key === k; })[0];
     if (out) out.textContent = levelWord(comp, weights[k]);
+    t.setAttribute('aria-valuetext', FMT[k](weights[k]));
+    showBubble(t);
     refresh();
   }
+  var bubbleTimers = {};
+  function showBubble(inp) {
+    var k = inp.getAttribute('data-w'), b = root.querySelector('#rk-wb-' + k);
+    if (!b) return;
+    var min = parseFloat(inp.min), max = parseFloat(inp.max), v = parseFloat(inp.value), tw = 18;
+    var frac = max > min ? (v - min) / (max - min) : 0;
+    b.textContent = FMT[k](v);
+    b.style.left = 'calc(' + (frac * 100) + '% + ' + (tw / 2 - frac * tw) + 'px)';
+    b.classList.add('show');
+    clearTimeout(bubbleTimers[k]);
+  }
+  function hideBubbleSoon(inp) {
+    var k = inp.getAttribute('data-w'), b = root.querySelector('#rk-wb-' + k);
+    if (!b) return;
+    clearTimeout(bubbleTimers[k]);
+    bubbleTimers[k] = setTimeout(function () { b.classList.remove('show'); }, 800);
+  }
+  function onBubbleEvt(e) {
+    var t = e.target;
+    if (!t.getAttribute || !t.getAttribute('data-w')) return;
+    if (e.type === 'pointerdown' || e.type === 'focusin') showBubble(t); else hideBubbleSoon(t);
+  }
+
+  /* ---------- demo seed: a shift already in progress (synthetic; deterministic; runs once at load) ---------- */
+  function seedOverrides() {
+    var D = '2026-11-23T', FTM = H.fastTrack, ft;
+    function pc(id) { return Math.round(FTM.score(H.getPatient(id)).probability * 100); }
+    function stamp(entry, hhmm) { entry.time = D + hhmm + ':00'; }
+    /* weights first, so the ranks quoted in the log match what the queue shows */
+    weights.recheck = savedWeights.recheck = 1.5;
+    applyOverride('P0027', 'pin', 'Interpreter available now for 10 min', { nurse: 'RN Garcia', time: D + '09:38:00' });
+    applyOverride('P0025', 'down', 'Waiting on X-ray result before reassessment', { nurse: 'RN Patel', time: D + '09:47:00' });
+    ft = H.logOverride({ module: 'fasttrack', patient_id: 'P0006', ai_suggestion: 'Fast-track (' + pc('P0006') + '%)', nurse_decision: 'Keep in main queue',
+      reason: 'Ankle swelling looks like possible fracture; needs main ED imaging', nurse: 'RN Garcia' });
+    stamp(ft, '09:55');
+    applyOverride('P0012', 'up', 'Patient looks paler, vitals trending down', { nurse: 'Charge RN Kim', time: D + '10:03:00' });
+    ft = H.logOverride({ module: 'fasttrack', patient_id: 'P0009', ai_suggestion: 'Not fast-track (' + pc('P0009') + '%)', nurse_decision: 'Send to fast-track',
+      reason: 'Localized rash, stable; fast-track APP agrees', nurse: 'RN Patel' });
+    stamp(ft, '10:11');
+    H.getPatient('P0009').status = 'fast-track';
+    ft = H.logOverride({ module: 'ranking', patient_id: null, ai_suggestion: 'Previous scoring weights: Overdue re-check 1',
+      nurse_decision: 'Scoring weights changed: Overdue re-check 1 → 1.5', reason: 'Raised overdue re-check weight; nights are seeing slow re-checks', nurse: 'Charge RN Kim' });
+    stamp(ft, '10:18');
+    lastWeightChange = { nurse: 'Charge RN Kim', time: '10:18', reason: 'Raised overdue re-check weight; nights are seeing slow re-checks' };
+  }
+  seedOverrides();
 
   /* ---------- mount ---------- */
   H.registerModule('ranking', {
@@ -578,13 +624,17 @@
       el.addEventListener('click', onClick);
       el.addEventListener('submit', onSubmit);
       el.addEventListener('input', onInput);
+      ['pointerdown', 'focusin'].forEach(function (n) { el.addEventListener(n, onBubbleEvt); });
+      ['pointerup', 'pointercancel', 'focusout', 'change'].forEach(function (n) { el.addEventListener(n, onBubbleEvt); });
+      document.addEventListener('pointerup', function () { root.querySelectorAll('.wbubble.show').forEach(function (b) { hideBubbleSoon(root.querySelector('#rk-w-' + b.id.slice(6))); }); });
+      if (lastWeightChange) root.querySelector('#rk-w-last').textContent = 'Last changed by ' + lastWeightChange.nurse + ' at ' + lastWeightChange.time + ' — reason: ' + lastWeightChange.reason;
       root.querySelector('#rk-w-save').addEventListener('click', saveWeights);
       root.querySelector('#rk-reset').addEventListener('click', function () {
         COMPONENTS.forEach(function (c) { weights[c.key] = c.def; });
         buildWeights();
         refresh();
       });
-      ['patient:updated', 'symptomUpdate', 'override', 'settings', 'aiOffline', 'patientview:leaving', 'leave:updated'].forEach(function (evt) { H.on(evt, function () { refresh(); }); });
+      ['patient:updated', 'symptomUpdate', 'override', 'settings', 'aiOffline', 'leave:updated'].forEach(function (evt) { H.on(evt, function () { refresh(); }); });
       refresh();
     }
   });

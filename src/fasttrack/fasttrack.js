@@ -72,32 +72,45 @@
       }).join('') + '<p class="muted">Blue bars (+) push toward "quick case", red bars (−) push away. Values are log-odds; the score is advice only.</p>';
     }
 
+    function cap(t) { t = String(t || ''); return t.charAt(0).toUpperCase() + t.slice(1); }
+    function prefText(p) {
+      if (p.esi < 4) return '';
+      return p.consult_pref === 'virtual' ? ' · <span class="ft-chip">prefers video</span>' : p.consult_pref === 'in_person' ? ' · prefers in person' : '';
+    }
     function rowHtml(p) {
       var offline = H.state.aiOffline;
       var hi = p.esi <= 2;
       var s = (!hi && !offline && model) ? FT.score(p) : null;
-      var cells = '<td>' + esc(p.id) + '</td><td><span class="badge esi-' + p.esi + '">ESI ' + p.esi + '</span></td>' +
-        '<td>' + esc(p.chief_complaint) + '<div class="muted">' + p.age + 'y, waiting ' + waitMin(p) + ' min</div>' + prefBadge(p) + '</td>';
-      var score, actions;
+      var id = esc(p.id), thr = H.state.settings.fasttrackThreshold;
+      var info = '<div class="ft-who"><strong class="ft-id">' + id + '</strong> <span class="badge esi-' + p.esi + '">ESI ' + p.esi + '</span></div>' +
+        '<div class="ft-what"><div class="ft-complaint">' + esc(cap(p.chief_complaint)) + '</div>' +
+        '<div class="muted">' + p.age + ' y · waiting ' + waitMin(p) + ' min' + prefText(p) + '</div></div>';
+      var score = '', main = '', more = '';
       if (hi) {
-        score = '<span class="pill danger">Not eligible — high acuity</span>'; actions = '<span class="muted">No fast-track option</span>';
-      } else if (offline) {
-        score = '<span class="muted">AI offline — see manual criteria</span>';
-        actions = '<button class="btn btn-sm btn-primary" data-act="send" data-id="' + esc(p.id) + '">Send to fast-track (manual)</button>';
+        score = '<span class="muted">High acuity: never eligible for fast-track.</span>';
+        main = '<span class="muted">No fast-track option</span>';
+      } else if (offline || !s) {
+        score = '<span class="muted">AI offline: see manual criteria</span>';
+        main = '<button class="btn btn-sm btn-primary" data-act="send" data-id="' + id + '">Send to fast-track (manual)</button>';
       } else {
-        score = '<strong>' + pct(s.probability) + '% likely quick case</strong> ' +
-          (s.eligible ? '<span class="pill ok">Eligible (≥ ' + pct(s.threshold) + '%)</span>' : '<span class="pill warn">Below ' + pct(s.threshold) + '% threshold</span>') +
-          '<div><button class="btn btn-ghost btn-sm" data-act="why" data-id="' + esc(p.id) + '" aria-expanded="' + !!openWhy[p.id] + '">' + (openWhy[p.id] ? 'Hide why' : 'Why?') + '</button></div>';
-        actions = s.eligible
-          ? '<button class="btn btn-sm btn-primary" data-act="accept" data-id="' + esc(p.id) + '">Accept</button> ' +
-            (p.consult_pref === 'virtual' && p.esi >= 4 ? '<button class="btn btn-sm" data-act="virtual" data-id="' + esc(p.id) + '">Offer video consult</button> ' : '') +
-            '<button class="btn btn-sm" data-act="decline" data-id="' + esc(p.id) + '">Override / Decline</button>'
-          : '<button class="btn btn-sm" data-act="send" data-id="' + esc(p.id) + '">Send to fast-track anyway (override)</button>';
+        var v = pct(s.probability), t = pct(thr);
+        score = '<div class="ft-num ' + (s.eligible ? 'above' : 'below') + '">' + v + '%</div><div class="ft-numlbl">chance of a quick case</div>' +
+          '<div class="ft-meter" role="img" aria-label="Score ' + v + ' percent; cutoff ' + t + ' percent"><span class="ft-fill ' + (s.eligible ? 'above' : 'below') + '" style="width:' + v + '%"></span>' +
+          '<span class="ft-tick" style="left:' + t + '%" title="Cutoff ' + t + '%"></span></div>';
+        if (s.eligible) {
+          main = '<button class="btn btn-sm btn-primary" data-act="accept" data-id="' + id + '">Accept</button>';
+          if (p.consult_pref === 'virtual' && p.esi >= 4) more += '<button class="btn btn-ghost btn-sm" data-act="virtual" data-id="' + id + '">Offer video consult</button>';
+          more += '<button class="btn btn-ghost btn-sm" data-act="decline" data-id="' + id + '">Override / Decline</button>';
+        } else {
+          main = '<button class="btn btn-sm" data-act="send" data-id="' + id + '">Send to fast-track</button>';
+        }
+        more += '<button class="btn btn-ghost btn-sm" data-act="why" data-id="' + id + '" aria-expanded="' + !!openWhy[p.id] + '">' + (openWhy[p.id] ? 'Hide why' : 'Why?') + '</button>';
       }
-      var html = '<tr>' + cells + '<td>' + score + '</td><td>' + actions + '</td></tr>';
-      if (s && openWhy[p.id]) html += '<tr><td colspan="5">' + barsHtml(s.contributions) + '</td></tr>';
-      if (pending && pending.id === p.id) html += '<tr><td colspan="5">' + reasonForm(p, s) + '</td></tr>';
-      return html;
+      var html = '<div class="ft-row"><div class="ft-info">' + info + '</div><div class="ft-score">' + score + '</div>' +
+        '<div class="ft-actions">' + main + (more ? '<div class="ft-more">' + more + '</div>' : '') + '</div>';
+      if (s && openWhy[p.id]) html += '<div class="ft-extra">' + barsHtml(s.contributions) + '</div>';
+      if (pending && pending.id === p.id) html += '<div class="ft-extra">' + reasonForm(p, s) + '</div>';
+      return html + '</div>';
     }
 
     function reasonForm(p, s) {
@@ -226,11 +239,9 @@
       if (pending && !vis.some(function (p) { return p.id === pending.id; })) {
         var pp = list.filter(function (p) { return p.id === pending.id; })[0]; if (pp) vis.push(pp);
       }
-      var body = vis.length ? vis.map(rowHtml).join('') : '<tr><td colspan="5" class="muted">None right now.</td></tr>';
-      return '<div class="card"><h2>' + esc(title) + ' (' + list.length + ')</h2>' + (note ? '<p class="muted">' + esc(note) + '</p>' : '') +
-        '<p class="muted" style="margin:0 0 .3rem">Showing ' + Math.min(vis.length, list.length) + ' of ' + list.length + '.</p>' +
-        '<div class="table-wrap"><table class="table"><thead><tr><th>ID</th><th>Acuity</th><th>Complaint</th><th>Fast-track score</th><th>Action</th></tr></thead><tbody>' + body + '</tbody></table></div>' +
-        moreBtn(key, list.length) + '</div>';
+      var body = vis.length ? vis.map(rowHtml).join('') : '<p class="muted">None right now.</p>';
+      return '<div class="card"><h2>' + esc(title) + ' (' + list.length + ')' + (note ? ' <span class="ft-h2note">' + esc(note) + '</span>' : '') + '</h2>' +
+        '<div class="ft-list">' + body + '</div>' + moreBtn(key, list.length) + '</div>';
     }
 
     function render() {
@@ -244,10 +255,10 @@
         groups = groupHtml('g-offline', 'Waiting, ESI 3–5', 'AI offline, so no scores: ordered by acuity then arrival.', all.filter(function (p) { return p.esi >= 3; }));
       } else {
         var r = rankCandidates(all);
-        groups = groupHtml('g-elig', 'Eligible for fast-track', 'Score at or above the cutoff, longest wait first (fair order among safe quick cases).', r.list.filter(function (p) { return r.scores[p.id].eligible; })) +
-          groupHtml('g-below', 'Below the cutoff', 'Highest score first: near-misses a nurse may want to review.', r.list.filter(function (p) { return !r.scores[p.id].eligible; }));
+        groups = groupHtml('g-elig', 'Suggested for fast-track', '— score above the ' + pct(H.state.settings.fasttrackThreshold) + '% cutoff', r.list.filter(function (p) { return r.scores[p.id].eligible; })) +
+          groupHtml('g-below', 'Below the cutoff', '— not suggested, nurse can still send', r.list.filter(function (p) { return !r.scores[p.id].eligible; }));
       }
-      groups += groupHtml('g-high', 'High acuity (ESI 1–2)', 'Never eligible for fast-track.', all.filter(function (p) { return p.esi <= 2; }));
+      groups += groupHtml('g-high', 'High acuity (ESI 1–2)', '— never eligible for fast-track', all.filter(function (p) { return p.esi <= 2; }));
       el.innerHTML =
         '<div class="grid cols-2"><div>' + (H.state.aiOffline ? manualHtml() : '') + intro + groups + '</div>' +
         '<div>' + videoHtml() + suggestionsHtml() + consultHtml() + capacityHtml() + thresholdHtml() + '</div></div>';
