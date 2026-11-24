@@ -559,6 +559,22 @@
     refresh();
   }
 
+  /* Demo seed: with no patient page, one long-waiting patient already tapped "thinking of leaving" so the card shows. */
+  function seedLeaveNotice() {
+    if ((H.state.leaveNotices || []).length) return;
+    var cands = H.state.patients.filter(function (p) { return p.status === 'waiting' && p.esi >= 3; });
+    cands.sort(function (a, b) { return waitMin(b) - waitMin(a); });
+    var p = cands[0];
+    if (!p) return;
+    var lang = p.preferred_language === 'es' ? 'es' : 'en';
+    var notice = { patient_id: p.id, time: U.iso(U.now()), nurse_notified: true, status: 'drafting', lang: lang, draft: '', source: '', final_text: '', reviewed_by: null };
+    H.state.leaveNotices = [notice];
+    H.ai.leavePlan(p, lang).then(function (r) {
+      notice.draft = r.text; notice.source = r.source; notice.status = 'pending_review';
+      H.emit('leave:updated', notice);
+    });
+  }
+
   /* ---------- mount ---------- */
   H.registerModule('ranking', {
     mount: function (el) {
@@ -574,7 +590,8 @@
         buildWeights();
         refresh();
       });
-      ['patient:updated', 'symptomUpdate', 'override', 'settings', 'aiOffline', 'patientview:leaving', 'leave:updated'].forEach(function (evt) { H.on(evt, function () { refresh(); }); });
+      ['patient:updated', 'symptomUpdate', 'override', 'settings', 'aiOffline', 'leave:updated'].forEach(function (evt) { H.on(evt, function () { refresh(); }); });
+      seedLeaveNotice();
       refresh();
     }
   });
